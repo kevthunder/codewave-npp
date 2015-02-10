@@ -27,8 +27,8 @@ class Codewave():
 		cmd = self.commandOnCursorPos()
 		if cmd is not None :
 			cmd.init()
-			Npp.console.write(str(vars(cmd)))
-			# cmd.execute()
+			Npp.console.write(str(vars(cmd))+'\n')
+			cmd.execute()
 		else:
 			cpos = self.editor.getCursorPos()
 			if cpos['start'] == cpos['end'] :
@@ -88,9 +88,9 @@ class Codewave():
 		return i
 	def isEndLine(self,pos):
 		return self.editor.textSubstr(pos,pos+1) == "\n" or pos + 1 >= self.editor.textLen()
-	# def findLineStart(self,pos):
-		# p = self.findAnyNext(pos ,["\n"], -1)
-		# if p then p.pos+1 else 0:
+	def findLineStart(self,pos):
+		p = self.findAnyNext(pos ,["\n"], -1)
+		return p.pos+1 if p is not None else 0
 	def findPrevBraket(self,start):
 		return self.findNextBraket(start,-1)
 	def findNextBraket(self,start,direction = 1):
@@ -165,7 +165,9 @@ class Codewave():
 	# def removeNameSpace(self,name):
 		# self.nameSpaces = self.nameSpaces.filter (n) -> n isnt name
 	def getCmd(self,cmdName,nameSpaces = []) :
-		return CmdFinder(cmdName,self.getNameSpaces() + nameSpaces).find()
+		finder = CmdFinder(cmdName,self.getNameSpaces() + nameSpaces)
+		find = finder.find()
+		return find
 	def getCommentChar(self):
 		return '<!-- %s -->'
 	def wrapComment(self,str):
@@ -188,6 +190,6 @@ class Codewave():
 			return str + cc[i+2:]
 		else:
 			return str + ' ' + cc
-	# def removeCarret(self,str):
-		# re = new RegExp(Codewave.util.escapeRegExp(self.carretChar), "g")
-		# str.replace(re,'')
+	def removeCarret(self,str):
+		reg = re.compile(util.escapeRegExp(self.carretChar))
+		return re.sub(reg,'',str)

@@ -1,9 +1,16 @@
+from codewave import Codewave
+import Npp
+
+def _optKey(key,dict): 
+	# optional Dictionary key
+	return dict[key] if key in dict else None
+
 class Command():
 	def __init__(self,name,data=None,parent=None):
 		self.name,self.data,self.parent = name,data,parent
 		self.cmds = []
-		self.result = self.aliasOf = self.cls = self.fullName = None
-		self.depth, self.executable = 0, False
+		self.resultStr = self.aliasOf = self.cls = self.fullName = None
+		self.depth = 0
 		self._parent, self._inited = None, False
 	@property
 	def parent(self):
@@ -26,25 +33,48 @@ class Command():
 		if not self._inited :
 			self.parseData(self.data)
 		return self
+	def isExecutable(self):
+		for p in ['resultStr','aliasOf','cls'] :
+			if getattr(self, p) is not None:
+				return True
+		return False
+	def resultIsAvailable(self):
+		for p in ['resultStr'] :
+			if getattr(self, p) is not None:
+				return True
+		return False
+	def result(self,instance):
+		if self.resultStr is not None:
+			return self.resultStr
+	def getExecutableObj(self,instance):
+		if self.cls is not None :
+			return self.cls(instance)
+		aliassed = self.getAliassed(instance.codewave)
+		if aliassed is not None :
+			return aliassed.getExecutableObj(self.aliasOf)
+		return self
+	def getAliassed(self,codewave = None):
+		if codewave is None :
+			codewave = Codewave()
+		if self.aliasOf is not None :
+			return codewave.getCmd(cmd.aliasOf)
 	def parseData(self,data):
 		self.data = data
 		if isinstance(data, str):
-			self.result = str
-			self.executable = True
+			self.resultStr = data
 			return True
 		elif isinstance(data,dict) :
-			return parseDictData(data)
+			return self.parseDictData(data)
 		return False
 	def parseDictData(self,data):
-		execProps = ['result','aliasOf','cls']
-		for p in execProps :
-			if p in self.data:
-				setattr(self, p, self.data[p])
-				self.executable = True
-		if 'help' in self.data :
-			self.addCmd(self,Command('help',self.data['help'],self))
-		if 'cmds' in self.data :
-			self.addCmds(self.data['cmds'])
+		self.resultStr = _optKey('result',data)
+		self.aliasOf = _optKey('aliasOf',data)
+		self.cls = _optKey('cls',data)
+		if 'help' in data :
+			self.addCmd(self,Command('help',data['help'],self))
+		if 'cmds' in data :
+			self.addCmds(data['cmds'])
+		return True
 	def addCmds(self,cmds):
 		for name, data in cmds.items() :
 			self.addCmd(Command(name,data,self))
@@ -56,4 +86,8 @@ class Command():
 			if cmd.name == name:
 				return cmd
 		
-cmds = Command(None)
+cmds = Command(None,{
+  'cmds':{
+    'hello':'Hello, World!'
+  }
+})

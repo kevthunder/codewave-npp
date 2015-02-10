@@ -1,25 +1,30 @@
 import command
+reload(command)
+
+import Npp
 
 class CmdFinder():
 	def __init__(self,name,namespaces):
 		self.name,self.namespaces = name,namespaces
 		self.path = self.name.split(":");
 		self.baseName = self.path.pop()
+		self.root = command.cmds
 	def find(self):
-		return self.findIn(command.cmds)
+		self.cmd = self.findIn(self.root)
+		return self.cmd
 	def findIn(self,cmd,path = None):
 		if cmd is None:
 			return None
 		if path is None:
-			path = self.path
+			path = list(self.path)
 		cmd.init()
 		best = self.bestInPosibilities(self.findPosibilitiesIn(cmd,path))
 		if best is not None:
 			return best
 		elif len(path) <= 0:
 			direct = cmd.getCmd(self.baseName)
-			if direct is not None and direct.executable:
-				return None
+			if direct is not None and direct.init().isExecutable():
+				return direct
 	def findPosibilitiesIn(self,cmd,path):
 		posibilities = []
 		if len(path) > 0:
@@ -27,7 +32,7 @@ class CmdFinder():
 			if cmd is not None:
 				posibilities.append(cmd)
 		for nspc in self.namespaces:
-			nspcPath = self.name.split(":");
+			nspcPath = nspc.split(":");
 			nspcName = nspcPath.pop()
 			cmd = self.findIn(cmd.getCmd(nspcName),nspcPath + path)
 			if cmd is not None:

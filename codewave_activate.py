@@ -1,15 +1,14 @@
 # reload
-import codewave.codewave
-reload(codewave.codewave)
-import codewave.npp_editor
-reload(codewave.npp_editor)
-import codewave.cmd_instance
-reload(codewave.cmd_instance)
+import codewave_npp.codewave
+reload(codewave_npp.codewave)
+import codewave_npp.npp_editor
+reload(codewave_npp.npp_editor)
+import codewave_npp.cmd_instance
+reload(codewave_npp.cmd_instance)
 
 
-from codewave import *
-from codewave.codewave import Codewave
-from codewave.npp_editor import NppEditor
+from codewave_npp.codewave import Codewave
+from codewave_npp.npp_editor import NppEditor
 
 cw = Codewave(NppEditor())
 cw.onActivationKey()

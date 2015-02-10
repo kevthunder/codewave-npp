@@ -13,3 +13,6 @@ class NppEditor():
 		if end is None :
 			end = start
 		Npp.editor.setSelection(start,end)
+	def spliceText(self,start, end, text):
+		Npp.editor.setTarget(start, end)
+		Npp.editor.replaceTarget(text)

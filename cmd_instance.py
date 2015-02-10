@@ -113,7 +113,8 @@ class CmdInstance():
 			self.cmd = Codewave.cmd.core.cmd.no_execute
 		else:
 			self.cmd = self.codewave.getCmd(self.cmdName,self._getParentNamespaces())
-		self.cmdObj = self.cmd.cls(self) if self.cmd is not None and self.cmd.cls is not None else self.cmd
+		if self.cmd is not None:
+			self.cmdObj = self.cmd.getExecutableObj(self)
 		return self.cmd
 	def _getParentNamespaces(self):
 		nspcs = []
@@ -133,41 +134,42 @@ class CmdInstance():
 			# return self.named[n] if self.named[n]?
 			# return self.params[n] if self.params[n]?
 		# defVal
-	# def execute(self):
-		# if self.isEmpty():
-			# if self.codewave.closingPromp? && self.codewave.closingPromp.whithinOpenBounds(self.pos+len(self.codewave.brakets))?:
-				# self.codewave.closingPromp.cancel()
-			# else:
-				# self.replaceWith('')
-		# elif self.cmdObj?:
-			# if self.cmdObj.execute?:
-				# self.cmdObj.execute(self)
-			# elif (r = self.result())?:
-				# self.replaceWith(r)
-	# def result(self): 
-			# if self.cmdObj?.result?:
-				# if typeof(self.cmdObj.result) == "function":
-					# self.cmdObj.result(self)
-				# else:
-					# self.cmdObj.result
+	def execute(self):
+		if self.isEmpty():
+			if self.codewave.closingPromp is not None and self.codewave.closingPromp.whithinOpenBounds(self.pos+len(self.codewave.brakets)) is not None:
+				self.codewave.closingPromp.cancel()
+			else:
+				self.replaceWith('')
+		elif self.cmdObj is not None:
+			if self.cmdObj.resultIsAvailable():
+				res = self.cmdObj.result(self)
+				if res is not None:
+					self.replaceWith(res)
+			else:
+				self.cmdObj.execute(self)
+	def result(self): 
+			if self.cmdObj.resultIsAvailable():
+				self.cmdObj.result(self)
 	def getEndPos(self):
 		return self.pos+len(self.str)
-	# def getIndent(self):
-		# self.pos - self.codewave.findLineStart(self.pos)
-	# def applyIndent(self,text):
-		# text.replace(/\n/g,"\n"+Array(self.getIndent()+1).join(" "))
-	# def replaceWith(self,text):
-		# text = self.applyIndent(text)
+	def getIndent(self):
+		return self.pos - self.codewave.findLineStart(self.pos)
+	def applyIndent(self,text):
+		Npp.console.write(text+'\n')
+		return re.sub(r'\n', '\n'+util.repeatToLength(" ",self.getIndent()+1),text,0,re.M)
+	def replaceWith(self,text):
+		text = self.applyIndent(text)
 		
-		# if self.codewave.checkCarret:
-			# cursorPos = if (p = text.indexOf(self.codewave.carretChar)) > -1
-				# text = self.codewave.removeCarret(text)
-				# self.pos+p
-			# else:
-				# self.pos+len(text)
+		if self.codewave.checkCarret:
+			if self.codewave.carretChar in text :
+				p = text.index(self.codewave.carretChar)
+				text = self.codewave.removeCarret(text)
+				cursorPos = self.pos+p
+			else:
+				cursorPos = self.pos+len(text)
 			
 			
-		# self.codewave.editor.spliceText(self.pos,self.getEndPos(),text)
-		# self.codewave.editor.setCursorPos(cursorPos)
-		# self.replaceStart = self.pos
-		# self.replaceEnd = self.pos+len(text)
+		self.codewave.editor.spliceText(self.pos,self.getEndPos(),text)
+		self.codewave.editor.setCursorPos(cursorPos)
+		self.replaceStart = self.pos
+		self.replaceEnd = self.pos+len(text)
