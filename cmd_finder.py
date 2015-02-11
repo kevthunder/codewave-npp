@@ -1,7 +1,13 @@
 import command
+import core_cmds
+
 reload(command)
+reload(core_cmds)
+
+
 
 import Npp
+
 
 class CmdFinder():
 	def __init__(self,name,namespaces):
@@ -42,6 +48,6 @@ class CmdFinder():
 		if len(poss) > 0:
 			best = None
 			for p in poss:
-				if best is none or p.depth >= best.depth:
+				if best is None or p.depth >= best.depth:
 					best = p
 			return best;

@@ -5,7 +5,7 @@ import Npp
 class CmdInstance():
 	def __init__(self,codewave,pos,str):
 		self.codewave,self.pos,self.str = codewave,pos,str
-		self.closingPos = None
+		self.content = self.cmdObj = self.closingPos = None
 		if not self.isEmpty():
 			self._checkCloser()
 			self.opening = self.str
@@ -128,12 +128,15 @@ class CmdInstance():
 		return str[len(self.codewave.brakets):len(str)-len(self.codewave.brakets)]
 	def isEmpty(self):
 		return self.str == self.codewave.brakets + self.codewave.closeChar + self.codewave.brakets or self.str == self.codewave.brakets + self.codewave.brakets
-	# def getParam(self,names, defVal = None):
-		# names = [names] if (typeof names == 'string')
-		# for n in names:
-			# return self.named[n] if self.named[n]?
-			# return self.params[n] if self.params[n]?
-		# defVal
+	def getParam(self,names, defVal = None):
+		if type(names) is not list :
+			names = [names]
+		for n in names:
+			if isinstance( n, int ) and n < len(self.params) :
+				return self.params[n] 
+			if n in self.named :
+				return self.named[n] 
+		return defVal
 	def execute(self):
 		if self.isEmpty():
 			if self.codewave.closingPromp is not None and self.codewave.closingPromp.whithinOpenBounds(self.pos+len(self.codewave.brakets)) is not None:
@@ -146,6 +149,7 @@ class CmdInstance():
 				if res is not None:
 					self.replaceWith(res)
 			else:
+				Npp.console.write('cmdObj :'+str(vars(self.cmdObj))+'\n')
 				self.cmdObj.execute(self)
 	def result(self): 
 			if self.cmdObj.resultIsAvailable():
@@ -155,8 +159,7 @@ class CmdInstance():
 	def getIndent(self):
 		return self.pos - self.codewave.findLineStart(self.pos)
 	def applyIndent(self,text):
-		Npp.console.write(text+'\n')
-		return re.sub(r'\n', '\n'+util.repeatToLength(" ",self.getIndent()+1),text,0,re.M)
+		return re.sub(r'\n', '\n'+util.repeatToLength(" ",self.getIndent()),text,0,re.M)
 	def replaceWith(self,text):
 		text = self.applyIndent(text)
 		

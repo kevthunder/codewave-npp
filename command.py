@@ -1,4 +1,3 @@
-from codewave import Codewave
 import Npp
 
 def _optKey(key,dict): 
@@ -33,6 +32,8 @@ class Command():
 		if not self._inited :
 			self.parseData(self.data)
 		return self
+	def isEditable(self):
+		return self.resultStr is not None
 	def isExecutable(self):
 		for p in ['resultStr','aliasOf','cls'] :
 			if getattr(self, p) is not None:
@@ -55,6 +56,7 @@ class Command():
 		return self
 	def getAliassed(self,codewave = None):
 		if codewave is None :
+			from codewave import Codewave
 			codewave = Codewave()
 		if self.aliasOf is not None :
 			return codewave.getCmd(cmd.aliasOf)
@@ -81,11 +83,26 @@ class Command():
 	def addCmd(self,cmd):
 		cmd.parent = self
 		self.cmds.append(cmd)
+		return cmd
 	def getCmd(self,name):
 		for cmd in self.cmds:
 			if cmd.name == name:
 				return cmd
-		
+	def setCmd(self,fullname,cmd):
+		parts = fullname.split(':',1)
+		name = parts.pop()
+		if parts.length > 0 :
+			next = self.addCmd(Command(parts[0]))
+			return next.setCmd(name,cmd)
+		else:
+			return self.addCmd(cmd)
+	
+class BaseCommand():
+	def __init__(self,instance):
+		self.instance = instance
+	def resultIsAvailable(self):
+		return hasattr(self,"result")
+				
 cmds = Command(None,{
   'cmds':{
     'hello':'Hello, World!'

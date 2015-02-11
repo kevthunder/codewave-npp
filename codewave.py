@@ -114,7 +114,7 @@ class Codewave():
 				if end < start :
 					start, end = end, start
 				if stri == self.editor.textSubstr(start,end) :
-					return util.strPos(pos-len(stri) if direction < 0 else pos,stri)
+					return util.StrPos(pos-len(stri) if direction < 0 else pos,stri)
 			pos += direction
 	def findMatchingPair(self,startPos,opening,closing,direction = 1):
 		pos = startPos
@@ -191,5 +191,4 @@ class Codewave():
 		else:
 			return str + ' ' + cc
 	def removeCarret(self,str):
-		reg = re.compile(util.escapeRegExp(self.carretChar))
-		return re.sub(reg,'',str)
+		return str.replace(self.carretChar, '');
