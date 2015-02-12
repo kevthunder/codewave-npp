@@ -1,5 +1,6 @@
 import util
 import re
+import command
 import Npp
 
 class CmdInstance():
@@ -24,7 +25,7 @@ class CmdInstance():
 		if noBracket[0:len(self.codewave.closeChar)] == self.codewave.closeChar :
 			f = self._findOpeningPos()
 			if f is not None :
-				self.closingPos = {'pos':self.pos, 'str':self.str}
+				self.closingPos = util.StrPos(self.pos, self.str)
 				self.pos = f.pos
 				self.str = f.str
 	def _findOpeningPos(self):
@@ -110,7 +111,7 @@ class CmdInstance():
 		self.parent = p.init() if p is not None else None
 	def _getCmd(self):
 		if self.noBracket[0:len(self.codewave.noExecuteChar)] == self.codewave.noExecuteChar:
-			self.cmd = Codewave.cmd.core.cmd.no_execute
+			self.cmd = command.cmds.getCmd('core:no_execute')
 		else:
 			self.cmd = self.codewave.getCmd(self.cmdName,self._getParentNamespaces())
 		if self.cmd is not None:
@@ -121,8 +122,8 @@ class CmdInstance():
 		obj = self
 		while obj.parent is not None:
 			obj = obj.parent
-			if obj.cmd is not None:
-				nspcs.append(obj.cmd.fullname) 
+			if obj.cmd is not None and obj.cmd.fullName is not None:
+				nspcs.append(obj.cmd.fullName) 
 		return nspcs
 	def _removeBracket(self,str):
 		return str[len(self.codewave.brakets):len(str)-len(self.codewave.brakets)]
@@ -146,11 +147,13 @@ class CmdInstance():
 		elif self.cmdObj is not None:
 			if self.cmdObj.resultIsAvailable():
 				res = self.cmdObj.result(self)
+				Npp.console.write('cmdObj :'+str(res)+'\n')
 				if res is not None:
 					self.replaceWith(res)
+					return True
 			else:
 				Npp.console.write('cmdObj :'+str(vars(self.cmdObj))+'\n')
-				self.cmdObj.execute(self)
+				return self.cmdObj.execute(self)
 	def result(self): 
 			if self.cmdObj.resultIsAvailable():
 				self.cmdObj.result(self)
@@ -163,13 +166,12 @@ class CmdInstance():
 	def replaceWith(self,text):
 		text = self.applyIndent(text)
 		
+		cursorPos = self.pos+len(text)
 		if self.codewave.checkCarret:
 			if self.codewave.carretChar in text :
 				p = text.index(self.codewave.carretChar)
 				text = self.codewave.removeCarret(text)
 				cursorPos = self.pos+p
-			else:
-				cursorPos = self.pos+len(text)
 			
 			
 		self.codewave.editor.spliceText(self.pos,self.getEndPos(),text)

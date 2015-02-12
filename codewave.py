@@ -5,9 +5,10 @@ import cmd_instance
 reload(cmd_instance)
 import cmd_finder
 reload(cmd_finder)
+import text_parser
+reload(text_parser)
 
 import Npp
-from cmd_instance import CmdInstance
 from cmd_finder import CmdFinder
 
 class Codewave():
@@ -52,19 +53,23 @@ class Codewave():
 		next = self.findNextBraket(pos)
 		if next is None or self.countPrevBraket(prev) % 2 != 0 :
 			return None
-		return CmdInstance(self,prev,self.editor.textSubstr(prev,next+len(self.brakets)))
-	# def nextCmd(self,start = 0):
-		# pos = start
-		# while f = self.findAnyNext(pos ,[self.brakets,"\n"])
-			# pos = f.pos + len(f.str)
-			# if f.str == self.brakets:
-				# if beginning?:
-					# return new Codewave.CmdInstance(self,beginning,self.editor.textSubstr(beginning,f.pos+len(self.brakets)))
-				# else:
-					# beginning = f.pos
-			# else:
-				# beginning = None
-		# None
+		return cmd_instance.CmdInstance(self,prev,self.editor.textSubstr(prev,next+len(self.brakets)))
+	def nextCmd(self,start = 0):
+		pos = start
+		beginning = None
+		while True:
+			f = self.findAnyNext(pos ,[self.brakets,"\n"])
+			if f is None:
+				break
+			pos = f.pos + len(f.str)
+			if f.str == self.brakets:
+				if beginning is not None:
+					return cmd_instance.CmdInstance(self,beginning,self.editor.textSubstr(beginning,f.pos+len(self.brakets)))
+				else:
+					beginning = f.pos
+			else:
+				beginning = None
+		None
 	def getEnclosingCmd(self,pos = 0):
 		cpos = pos
 		closingPrefix = self.brakets + self.closeChar
@@ -141,29 +146,33 @@ class Codewave():
 		self.editor.setCursorPos(end+len(self.brakets))
 	# def promptClosingCmd(self,start, end) ->
 		# self.closingPromp.stop() if self.closingPromp?
-		# self.closingPromp = new Codewave.ClosingPromp(self,start, end)
-	# def parseAll(self,recursive = True):
-		# pos = 0
-		# while cmd = self.nextCmd(pos)
-			# pos = cmd.getEndPos()
-			# self.editor.setCursorPos(pos)
-			# if recursive && cmd.content? :
-				# parser = new Codewave(new Codewave.TextParser(cmd.content))
-				# cmd.content = parser.parseAll()
-			# if cmd.init().execute()?:
-				# if(cmd.replaceEnd?):
-					# pos = cmd.replaceEnd
-				# else:
-					# pos = self.editor.getCursorPos().end
-		# self.getText()
-	# def getText(self):
-		# self.editor.text()
+		# self.closingPromp = Codewave.ClosingPromp(self,start, end)
+	def parseAll(self,recursive = True):
+		pos = 0
+		while True:
+			cmd = self.nextCmd(pos)
+			if cmd is None:
+				break
+			pos = cmd.getEndPos()
+			self.editor.setCursorPos(pos)
+			if recursive and cmd.content is not None :
+				parser = Codewave(text_parser.TextParser(cmd.content))
+				cmd.content = parser.parseAll()
+			if cmd.init().execute() is not None:
+				Npp.console.write('parsedCmd: '+str(vars(cmd))+'\n')
+				if cmd.replaceEnd is not None:
+					pos = cmd.replaceEnd
+				else:
+					pos = self.editor.getCursorPos().end
+		return self.getText()
+	def getText(self):
+		return self.editor.text
 	def getNameSpaces(self):
 		return ['core'] + self.nameSpaces
-	# def addNameSpace(self,name):
-		# self.nameSpaces.append(name)
-	# def removeNameSpace(self,name):
-		# self.nameSpaces = self.nameSpaces.filter (n) -> n isnt name
+	def addNameSpace(self,name):
+		self.nameSpaces.append(name)
+	def removeNameSpace(self,name):
+		self.nameSpaces = [ n for n in self.nameSpaces if n != name]
 	def getCmd(self,cmdName,nameSpaces = []) :
 		finder = CmdFinder(cmdName,self.getNameSpaces() + nameSpaces)
 		find = finder.find()

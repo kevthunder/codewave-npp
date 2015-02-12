@@ -11,6 +11,7 @@ import Npp
 
 class CmdFinder():
 	def __init__(self,name,namespaces):
+		Npp.console.write('namespaces: '+str(namespaces)+'\n')
 		self.name,self.namespaces = name,namespaces
 		self.path = self.name.split(":");
 		self.baseName = self.path.pop()
@@ -34,15 +35,15 @@ class CmdFinder():
 	def findPosibilitiesIn(self,cmd,path):
 		posibilities = []
 		if len(path) > 0:
-			cmd = self.findIn(cmd.getCmd(path[:1]),path[1:])
-			if cmd is not None:
-				posibilities.append(cmd)
+			pos = self.findIn(cmd.getCmd(path[0]),path[1:])
+			if pos is not None:
+				posibilities.append(pos)
 		for nspc in self.namespaces:
 			nspcPath = nspc.split(":");
 			nspcName = nspcPath.pop()
-			cmd = self.findIn(cmd.getCmd(nspcName),nspcPath + path)
-			if cmd is not None:
-				posibilities.append(cmd)
+			pos = self.findIn(cmd.getCmd(nspcName),nspcPath + path)
+			if pos is not None:
+				posibilities.append(pos)
 		return posibilities
 	def bestInPosibilities(self,poss):
 		if len(poss) > 0:

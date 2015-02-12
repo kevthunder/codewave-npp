@@ -1,18 +1,22 @@
 import command
 import codewave
 import util
+import re
 import Npp
+import text_parser
+reload(text_parser)
+import textwrap
 
 core = command.cmds.addCmd(command.Command('core'))
 
 
-# def no_execute(instance)
-	# reg = re.compire("^"+util.escapeRegExp(instance.codewave.brakets) + util.escapeRegExp(instance.codewave.noExecuteChar))
-  # return re.sub(reg, '', instance.str)
-		
-# core.addCmd(command.Command('no_execute',{
-	# 'result' : no_execute
-# }))
+def no_execute(instance):
+	reg = re.compile("^("+util.escapeRegExp(instance.codewave.brakets) + ')' + util.escapeRegExp(instance.codewave.noExecuteChar))
+	return re.sub(reg, r'\1', instance.str)
+
+core.addCmd(command.Command('no_execute',{
+	'result' : no_execute
+}))
 
 # def exec_parent(instance)
 	# if instance.parent is not None:
@@ -116,46 +120,50 @@ core.addCmd(command.Command('box',{
 	# 'cls' : CloseCmd
 # }))
 
-# class EditCmd(command.BaseCommand):
-	# def __init__(self,instance):
-		# self.instance = instance
-		# self.cmdName = self.instance.getParam([0,'cmd'])
-		# self.verbalize = self.instance.getParam([1]) in ['v','verbalize']
-		# self.cmd = self.instance.codewave.getCmd(self.cmdName) if self.cmdName is not None else None
-		# self.editable = self.cmd.isEditable() if self.cmd is not None else None
-		# self.content = self.instance.content
-	# def result(self,instance):
-		# if self.cmd:
-			# if self.content:
-				# return self.resultWithContent()
-			# else:
-				# return self.resultWithoutContent()
-	# def resultWithContent(self):
-			# parser = codewave.Codewave(text_parser.TextParser(self.content))
-			# parser.addNameSpace(self.instance.cmd.fullname)
-			# parser.parseAll()
-			# console.log(parser);
-			# Codewave.setCmd(self.cmdName,command.Command(self.cmdName,{
-				# 'result': parser.vars.source
-			# }))
-			# return ''
-	# def resultWithoutContent(self):
-		# if self.editable:
-			# parser = codewave.Codewave(text_parser.Codewave.TextParser(
-				# """~~box cmd:"%(cmd)"~~
-				# ~~source~~
-				# %(source)
-				# ~~/source~~
-				# ~~save~~ ~~!close~~
-				# ~~/box~~""" % {'cmd': 'self.cmd.name', 'source': "self.cmd.result"}))
-			# parser.checkCarret = no
-			# return parser.getText() if self.verbalize else parser.parseAll()
+class EditCmd(command.BaseCommand):
+	def __init__(self,instance):
+		self.instance = instance
+		self.cmdName = self.instance.getParam([0,'cmd'])
+		self.verbalize = self.instance.getParam([1]) in ['v','verbalize']
+		self.cmd = self.instance.codewave.getCmd(self.cmdName) if self.cmdName is not None else None
+		self.editable = self.cmd.isEditable() if self.cmd is not None else None
+		self.content = self.instance.content
+	def result(self,instance):
+		if self.cmd:
+			if self.content:
+				return self.resultWithContent()
+			else:
+				return self.resultWithoutContent()
+	def resultWithContent(self):
+			parser = codewave.Codewave(text_parser.TextParser(self.content))
+			parser.addNameSpace(self.instance.cmd.fullName)
+			parser.parseAll()
+			command.cmds.setCmd(self.cmdName,command.Command(self.cmdName,{
+				'result': parser.vars.source
+			}))
+			return ''
+	def resultWithoutContent(self):
+		if self.editable:
+			parser = codewave.Codewave(text_parser.TextParser(textwrap.dedent(
+				"""
+				~~box cmd:"%(cmd)s"~~
+				~~source~~
+				%(source)s
+				~~/source~~
+				~~!save~~ ~~!close~~
+				~~/box~~
+				""") % {'cmd': self.instance.cmd.fullName + ' ' +self.cmd.name, 'source': self.cmd.resultStr}))
+				
+			Npp.console.write(str(vars(parser.editor))+'\n')
+			
+			parser.checkCarret = False
+			return parser.getText() if self.verbalize else parser.parseAll()
 		
-# core.addCmd(command.Command('edit',{
-	# 'cmds' : {
-		# 'save':{
-      # 'aliasOf': 'core:exec_parent'
-		# }
-	# },
-	# 'cls' : EditCmd
-# }))
+core.addCmd(command.Command('edit',{
+	'cmds' : {
+		'save':{
+      'aliasOf': 'core:exec_parent'
+		}
+	},
+	'cls' : EditCmd
+}))

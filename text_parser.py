@@ -1,23 +1,27 @@
-# class @Codewave.TextParser
-  # constructor: (@_text) ->
-  # text: (val) ->
-    # @_text = val if val?
-    # @_text
-  # textCharAt: (pos) ->
-    # @text()[pos]
-  # textLen: (pos) ->
-    # @text().length
-  # textSubstr: (start, end) ->
-    # @text().substring(start, end)
-  # insertTextAt: (text, pos) ->
-    # @text(@text().substring(0, pos)+text+@text().substring(pos,@text().length))
-  # spliceText: (start, end, text) ->
-    # @text(@text().slice(0, start) + (text || "") + @text().slice(end))
-  # getCursorPos: ->
-    # @target
-  # setCursorPos: (start, end) ->
-    # end = start if arguments.length < 2
-    # @target = (
-        # start: end
-        # end: end
-      # )
+import util
+class TextParser():
+	def __init__(self,text):
+		self._text = text
+		self.target = None
+	@property
+	def text(self):
+		return self._text
+	@text.setter
+	def text(self, val):
+		self._text = val
+	def textCharAt(self,pos):
+		return self.text[pos]
+	def textLen(self):
+		return len(self.text)
+	def textSubstr(self,start, end):
+		return self.text[start:end]
+	def insertTextAt(self,text, pos):
+		self.text = self.text[:pos]+text+self.text[pos:]
+	def spliceText(self,start, end, text):
+		self.text = self.text[:start]+(text or "")+self.text[end:]
+	def getCursorPos(self):
+		return self.target
+	def setCursorPos(self,start, end = None):
+		if end is None:
+			end = start
+		self.target = util.Pos(start, end)
