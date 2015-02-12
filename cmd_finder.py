@@ -5,13 +5,8 @@ reload(command)
 reload(core_cmds)
 
 
-
-import Npp
-
-
 class CmdFinder():
 	def __init__(self,name,namespaces):
-		Npp.console.write('namespaces: '+str(namespaces)+'\n')
 		self.name,self.namespaces = name,namespaces
 		self.path = self.name.split(":");
 		self.baseName = self.path.pop()
@@ -22,6 +17,7 @@ class CmdFinder():
 	def findIn(self,cmd,path = None):
 		if cmd is None:
 			return None
+		# Npp.console.write('find: '+self.name+' In: '+str(cmd.fullName)+' path: '+str(path)+'\n')
 		if path is None:
 			path = list(self.path)
 		cmd.init()
@@ -40,7 +36,7 @@ class CmdFinder():
 				posibilities.append(pos)
 		for nspc in self.namespaces:
 			nspcPath = nspc.split(":");
-			nspcName = nspcPath.pop()
+			nspcName = nspcPath.pop(0)
 			pos = self.findIn(cmd.getCmd(nspcName),nspcPath + path)
 			if pos is not None:
 				posibilities.append(pos)

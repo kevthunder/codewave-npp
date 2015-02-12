@@ -1,3 +1,6 @@
+import logger
+reload(logger)
+
 import util
 reload(util)
 
@@ -7,12 +10,13 @@ import cmd_finder
 reload(cmd_finder)
 import text_parser
 reload(text_parser)
+import closing_promp
+reload(closing_promp)
 
-import Npp
-from cmd_finder import CmdFinder
 
 class Codewave():
 	def __init__(self,editor):
+		self.closingPromp = None
 		self.editor = editor
 		self.brakets = '~~'
 		self.deco = '~'
@@ -24,11 +28,11 @@ class Codewave():
 		self.vars = {}
     
 	def onActivationKey(self):
-		Npp.console.write('activation key\n')
+		logger.log('activation key')
 		cmd = self.commandOnCursorPos()
 		if cmd is not None :
 			cmd.init()
-			Npp.console.write(str(vars(cmd))+'\n')
+			logger.log(cmd)
 			cmd.execute()
 		else:
 			cpos = self.editor.getCursorPos()
@@ -144,9 +148,10 @@ class Codewave():
 			self.editor.insertTextAt(self.brakets,end)
 			self.editor.insertTextAt(self.brakets,start)
 		self.editor.setCursorPos(end+len(self.brakets))
-	# def promptClosingCmd(self,start, end) ->
-		# self.closingPromp.stop() if self.closingPromp?
-		# self.closingPromp = Codewave.ClosingPromp(self,start, end)
+	def promptClosingCmd(self,start, end):
+		if self.closingPromp is not None:
+			self.closingPromp.stop()
+		self.closingPromp = closing_promp.ClosingPromp(self,start, end).begin()
 	def parseAll(self,recursive = True):
 		pos = 0
 		while True:
@@ -159,7 +164,6 @@ class Codewave():
 				parser = Codewave(text_parser.TextParser(cmd.content))
 				cmd.content = parser.parseAll()
 			if cmd.init().execute() is not None:
-				Npp.console.write('parsedCmd: '+str(vars(cmd))+'\n')
 				if cmd.replaceEnd is not None:
 					pos = cmd.replaceEnd
 				else:
@@ -174,9 +178,9 @@ class Codewave():
 	def removeNameSpace(self,name):
 		self.nameSpaces = [ n for n in self.nameSpaces if n != name]
 	def getCmd(self,cmdName,nameSpaces = []) :
-		finder = CmdFinder(cmdName,self.getNameSpaces() + nameSpaces)
-		find = finder.find()
-		return find
+		finder = cmd_finder.CmdFinder(cmdName,self.getNameSpaces() + nameSpaces)
+		found = finder.find()
+		return found
 	def getCommentChar(self):
 		return '<!-- %s -->'
 	def wrapComment(self,str):

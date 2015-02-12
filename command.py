@@ -1,4 +1,3 @@
-import Npp
 
 def _optKey(key,dict): 
 	# optional Dictionary key
@@ -8,7 +7,8 @@ class Command():
 	def __init__(self,name,data=None,parent=None):
 		self.name,self.data = name,data
 		self.cmds = []
-		self.resultFunct = self.resultStr = self.aliasOf = self.cls = None
+		self.executeFunct = self.resultFunct = self.resultStr = self.aliasOf = self.cls = None
+		self.aliassed = None
 		self.fullName = self.name
 		self.depth = 0
 		self._parent, self._inited = None, False
@@ -34,39 +34,56 @@ class Command():
 			)
 	def init(self):
 		if not self._inited :
+			self._inited = True
 			self.parseData(self.data)
 		return self
 	def isEditable(self):
 		return self.resultStr is not None
 	def isExecutable(self):
-		for p in ['resultStr','resultFunct','aliasOf','cls'] :
+		for p in ['resultStr','resultFunct','aliasOf','cls','executeFunct'] :
 			if getattr(self, p) is not None:
 				return True
 		return False
-	def resultIsAvailable(self):
+	def resultIsAvailable(self,instance = None):
+		if instance is not None and instance.cmdObj is not None:
+			return instance.cmdObj.resultIsAvailable()
 		for p in ['resultStr','resultFunct'] :
 			if getattr(self, p) is not None:
 				return True
 		return False
 	def result(self,instance):
+		if instance.cmdObj is not None:
+			return instance.cmdObj.result()
+		aliassed = self.getAliassed(instance.codewave)
+		if aliassed is not None :
+			return aliassed.result(instance)
 		if self.resultFunct is not None:
 			return self.resultFunct(instance)
 		if self.resultStr is not None:
 			return self.resultStr
+	def execute(self,instance):
+		if instance.cmdObj is not None:
+			return instance.cmdObj.execute()
+		aliassed = self.getAliassed(instance.codewave)
+		if aliassed is not None :
+			return aliassed.execute(instance)
+		if self.executeFunct is not None:
+			return self.executeFunct(instance)
 	def getExecutableObj(self,instance):
 		self.init()
 		if self.cls is not None :
 			return self.cls(instance)
 		aliassed = self.getAliassed(instance.codewave)
 		if aliassed is not None :
-			return aliassed.getExecutableObj(self.aliasOf)
-		return self
+			return aliassed.getExecutableObj(instance)
 	def getAliassed(self,codewave = None):
-		if codewave is None :
-			from codewave import Codewave
-			codewave = Codewave()
 		if self.aliasOf is not None :
-			return codewave.getCmd(cmd.aliasOf)
+			if self.aliassed is None :
+				if codewave is None :
+					from codewave import Codewave
+					codewave = Codewave()
+				self.aliassed = codewave.getCmd(self.aliasOf) or False
+			return self.aliassed or None
 	def parseData(self,data):
 		self.data = data
 		if isinstance(data, str):
@@ -81,6 +98,9 @@ class Command():
 			self.resultFunct = res
 		else :
 			self.resultStr = res
+		execute = _optKey('execute',data)
+		if hasattr(execute, '__call__') :
+			self.executeFunct = execute
 		self.aliasOf = _optKey('aliasOf',data)
 		self.cls = _optKey('cls',data)
 		if 'help' in data :
@@ -92,8 +112,16 @@ class Command():
 		for name, data in cmds.items() :
 			self.addCmd(Command(name,data,self))
 	def addCmd(self,cmd):
+		exists = self.getCmd(cmd.name)
+		if exists is not None :
+			self.removeCmd(exists)
+			# exists.name = 'super'
+			# cmd.addCmd(exists)
 		cmd.setParent(self)
 		self.cmds.append(cmd)
+		return cmd
+	def removeCmd(self,cmd):
+		self.cmds.remove(cmd)
 		return cmd
 	def getCmd(self,fullname):
 		self.init()
@@ -113,7 +141,8 @@ class Command():
 				next = self.addCmd(Command(parts[0]))
 			return next.setCmd(name,cmd)
 		else:
-			return self.addCmd(cmd)
+			self.addCmd(cmd)
+			return cmd
 	
 class BaseCommand():
 	def __init__(self,instance):
@@ -121,8 +150,9 @@ class BaseCommand():
 	def resultIsAvailable(self):
 		return hasattr(self,"result")
 				
-cmds = Command(None,{
-  'cmds':{
-    'hello':'Hello, World!'
-  }
-})
+if 'cmds' not in vars() : # if True :
+	cmds = Command(None,{
+		'cmds':{
+			'hello':'Hello, World!'
+		}
+	})

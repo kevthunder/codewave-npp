@@ -2,13 +2,26 @@ import command
 import codewave
 import util
 import re
-import Npp
 import text_parser
 reload(text_parser)
 import textwrap
 
 core = command.cmds.addCmd(command.Command('core'))
 
+def set_var(name,instance):
+	val = None
+	p = instance.getParam(0)
+	if p is not None :
+		val = p
+	elif instance.content :
+		val = instance.content
+	if val is not None :
+		instance.codewave.vars[name] = val
+		return val
+def makeVarCmd(name) :
+	return {
+		'execute': (lambda instance: set_var(name,instance))
+	}
 
 def no_execute(instance):
 	reg = re.compile("^("+util.escapeRegExp(instance.codewave.brakets) + ')' + util.escapeRegExp(instance.codewave.noExecuteChar))
@@ -18,13 +31,16 @@ core.addCmd(command.Command('no_execute',{
 	'result' : no_execute
 }))
 
-# def exec_parent(instance)
-	# if instance.parent is not None:
-		# return instance.parent.execute()
+def exec_parent(instance):
+	if instance.parent is not None:
+		res = instance.parent.execute()
+		self.replaceStart = instance.parent.replaceStart
+		self.replaceEnd = instance.parent.replaceEnd
+		return res
 		
-# core.addCmd(command.Command('exec_parent',{
-	# 'execute' : exec_parent
-# }))
+core.addCmd(command.Command('exec_parent',{
+	'execute' : exec_parent
+}))
 
 
 class BoxCmd(command.BaseCommand):
@@ -52,7 +68,7 @@ class BoxCmd(command.BaseCommand):
 		self.cmd = self.instance.getParam(['cmd'])
 		self.deco = self.instance.codewave.deco
 		self.pad = 2
-	def result(self,instance):
+	def result(self):
 		return self.startSep() + "\n" + self.lines(self.instance.content) + "\n"+ self.endSep()
 	def wrapComment(self,str):
 		return self.instance.codewave.wrapComment(str)
@@ -96,29 +112,29 @@ core.addCmd(command.Command('box',{
 	'cls' : BoxCmd
 }))
 
-# class CloseCmd(command.BaseCommand):
-	# def __init__(self,instance):
-		# self.instance = instance
-		# self.deco = self.instance.codewave.deco
-	# def startFind(self):
-		# self.instance.codewave.wrapCommentLeft(self.deco + self.deco)
-	# def endFind(self):
-		# self.instance.codewave.wrapCommentRight(self.deco + self.deco)
-	# def execute(self):
-		# startFind = self.startFind()
-		# endFind = self.endFind()
-		# start = self.instance.codewave.findPrev(self.instance.pos, startFind)
-		# end = self.instance.codewave.findNext(self.instance.getEndPos(), endFind) + len(endFind)
-		# if start? and end?:
-			# self.instance.codewave.editor.spliceText(start,end,'')
-			# self.instance.codewave.editor.setCursorPos(start)
-		# else:
-			# self.instance.replaceWith('')
+class CloseCmd(command.BaseCommand):
+	def __init__(self,instance):
+		self.instance = instance
+		self.deco = self.instance.codewave.deco
+	def startFind(self):
+		return self.instance.codewave.wrapCommentLeft(self.deco + self.deco)
+	def endFind(self):
+		return self.instance.codewave.wrapCommentRight(self.deco + self.deco)
+	def execute(self):
+		startFind = self.startFind()
+		endFind = self.endFind()
+		start = self.instance.codewave.findPrev(self.instance.pos, startFind)
+		end = self.instance.codewave.findNext(self.instance.getEndPos(), endFind) 
+		if start is not None and end is not None :
+			self.instance.codewave.editor.spliceText(start,end + len(endFind),'')
+			self.instance.codewave.editor.setCursorPos(start)
+		else:
+			self.instance.replaceWith('')
 
 
-# core.addCmd(command.Command('close',{
-	# 'cls' : CloseCmd
-# }))
+core.addCmd(command.Command('close',{
+	'cls' : CloseCmd
+}))
 
 class EditCmd(command.BaseCommand):
 	def __init__(self,instance):
@@ -126,24 +142,23 @@ class EditCmd(command.BaseCommand):
 		self.cmdName = self.instance.getParam([0,'cmd'])
 		self.verbalize = self.instance.getParam([1]) in ['v','verbalize']
 		self.cmd = self.instance.codewave.getCmd(self.cmdName) if self.cmdName is not None else None
-		self.editable = self.cmd.isEditable() if self.cmd is not None else None
+		self.editable = self.cmd.isEditable() if self.cmd is not None else True
 		self.content = self.instance.content
-	def result(self,instance):
-		if self.cmd:
-			if self.content:
-				return self.resultWithContent()
-			else:
-				return self.resultWithoutContent()
+	def result(self):
+		if self.content:
+			return self.resultWithContent()
+		else:
+			return self.resultWithoutContent()
 	def resultWithContent(self):
 			parser = codewave.Codewave(text_parser.TextParser(self.content))
 			parser.addNameSpace(self.instance.cmd.fullName)
 			parser.parseAll()
 			command.cmds.setCmd(self.cmdName,command.Command(self.cmdName,{
-				'result': parser.vars.source
+				'result': parser.vars['source']
 			}))
 			return ''
 	def resultWithoutContent(self):
-		if self.editable:
+		if self.cmd and self.editable:
 			parser = codewave.Codewave(text_parser.TextParser(textwrap.dedent(
 				"""
 				~~box cmd:"%(cmd)s"~~
@@ -153,14 +168,12 @@ class EditCmd(command.BaseCommand):
 				~~!save~~ ~~!close~~
 				~~/box~~
 				""") % {'cmd': self.instance.cmd.fullName + ' ' +self.cmd.name, 'source': self.cmd.resultStr}))
-				
-			Npp.console.write(str(vars(parser.editor))+'\n')
-			
 			parser.checkCarret = False
 			return parser.getText() if self.verbalize else parser.parseAll()
 		
 core.addCmd(command.Command('edit',{
 	'cmds' : {
+		'source': makeVarCmd('source'),
 		'save':{
       'aliasOf': 'core:exec_parent'
 		}

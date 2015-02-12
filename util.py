@@ -16,6 +16,9 @@ class Pos():
 	def __init__(self,start,end):
 		self.start,self.end = start,end
 		
+class wrappedPos():
+	def __init__(self,start,innerStart,innerEnd,end):
+		self.start,self.innerStart,self.innerEnd,self.end = start,innerStart,innerEnd,end
 def getTxtSize(txt):
 	lines = txt.replace('\r','').split("\n")
 	w = 0

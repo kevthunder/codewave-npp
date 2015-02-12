@@ -1,12 +1,12 @@
 import util
 import re
 import command
-import Npp
 
 class CmdInstance():
 	def __init__(self,codewave,pos,str):
 		self.codewave,self.pos,self.str = codewave,pos,str
 		self.content = self.cmdObj = self.closingPos = None
+		self.replaceStart = self.replaceEnd = None
 		if not self.isEmpty():
 			self._checkCloser()
 			self.opening = self.str
@@ -144,19 +144,17 @@ class CmdInstance():
 				self.codewave.closingPromp.cancel()
 			else:
 				self.replaceWith('')
-		elif self.cmdObj is not None:
-			if self.cmdObj.resultIsAvailable():
-				res = self.cmdObj.result(self)
-				Npp.console.write('cmdObj :'+str(res)+'\n')
+		elif self.cmd is not None:
+			if self.cmd.resultIsAvailable(self):
+				res = self.cmd.result(self)
 				if res is not None:
 					self.replaceWith(res)
 					return True
 			else:
-				Npp.console.write('cmdObj :'+str(vars(self.cmdObj))+'\n')
-				return self.cmdObj.execute(self)
+				return self.cmd.execute(self)
 	def result(self): 
-			if self.cmdObj.resultIsAvailable():
-				self.cmdObj.result(self)
+			if self.cmd.resultIsAvailable():
+				self.cmd.result(self)
 	def getEndPos(self):
 		return self.pos+len(self.str)
 	def getIndent(self):
