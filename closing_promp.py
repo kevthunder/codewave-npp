@@ -15,8 +15,8 @@ class ClosingPromp():
 		p2 = self.end+len(self.codewave.brakets)*3+len(self.codewave.closeChar)+2
 		self.codewave.editor.setCursorPos(p2)
 		Npp.editor.addSelection(p1,p1)
-		# Npp.notepad.callback(self.onAnyChange, [Npp.NOTIFICATION.READONLYCHANGED])
-	def onAnyChange(self,bufferID, readonly, dirty):
+		Npp.editor.callback(self.onAnyChange, [Npp.SCINTILLANOTIFICATION.CHARADDED])
+	def onAnyChange(self,ch):
 		logger.log('onAnyChange')
 	def stop(self):
 		if self.codewave.closingPromp == this :
