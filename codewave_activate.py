@@ -13,7 +13,7 @@ from codewave_npp.codewave import Codewave
 from codewave_npp.npp_editor import NppEditor
 
 
-if 'cw' not in vars() :
+if 'cw' not in vars() or cw is None :
 	codewave_npp.logger.log('init codewave');
 	cw = Codewave(NppEditor())
 	

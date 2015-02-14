@@ -44,19 +44,18 @@ class Codewave():
 		cpos = self.editor.getCursorPos()
 		return self.commandOnPos(cpos['end'])
 	def commandOnPos(self,pos):
-		prev = (
-			pos-len(self.brakets)
-			if self.editor.textSubstr(pos-len(self.brakets),pos) == self.brakets 
-			else self.findPrevBraket(pos if self.isEndLine(pos) else pos+1)
-		)
-		if prev is None :
-			return None 
-		if prev > pos-len(self.brakets) :
-			pos = prev
+		if self.precededByBrakets(pos) and self.followedByBrakets(pos) and self.countPrevBraket(pos) % 2 == 1 :
+			prev = pos-len(self.brakets)
+			next = pos
+		else :
+			if self.precededByBrakets(pos) and self.countPrevBraket(pos) % 2 == 0:
+				pos -= len(self.brakets)
 			prev = self.findPrevBraket(pos)
-		next = self.findNextBraket(pos)
-		if next is None or self.countPrevBraket(prev) % 2 != 0 :
-			return None
+			if prev is None :
+				return None 
+			next = self.findNextBraket(pos-1)
+			if next is None or self.countPrevBraket(prev) % 2 != 0 :
+				return None
 		return cmd_instance.CmdInstance(self,prev,self.editor.textSubstr(prev,next+len(self.brakets)))
 	def nextCmd(self,start = 0):
 		pos = start
@@ -88,6 +87,10 @@ class Codewave():
 					return cmd
 			else:
 				cpos = p+len(losingPrefix)
+	def precededByBrakets(self,pos):
+		return self.editor.textSubstr(pos-len(self.brakets),pos) == self.brakets
+	def followedByBrakets(self,pos):
+		return self.editor.textSubstr(pos,pos+len(self.brakets)) == self.brakets
 	def countPrevBraket(self,start):
 		i = 0
 		start = self.findPrevBraket(start)

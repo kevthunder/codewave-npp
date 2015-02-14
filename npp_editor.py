@@ -16,3 +16,7 @@ class NppEditor():
 	def spliceText(self,start, end, text):
 		Npp.editor.setTarget(start, end)
 		Npp.editor.replaceTarget(text)
+	def beginUndoAction(self):
+		Npp.editor.beginUndoAction()
+	def endUndoAction(self):
+		Npp.editor.endUndoAction()
