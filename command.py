@@ -1,8 +1,27 @@
+import storage
+reload(storage)
 
 def _optKey(key,dict): 
 	# optional Dictionary key
 	return dict[key] if key in dict else None
 
+def saveCmd(fullname,data):
+	global cmds
+	cmds.setCmd(fullname,Command(fullname.split(':').pop(),data))
+	savedCmds = storage.load('cmds')
+	if savedCmds is None :
+		savedCmds = {}
+	savedCmds[fullname] = data
+	storage.save('cmds',savedCmds)
+
+def loadCmds():
+	global cmds
+	savedCmds = storage.load('cmds')
+	if savedCmds is not None :
+		for fullname, data in savedCmds.iteritems():
+			cmds.setCmd(fullname,Command(fullname.split(':').pop(),data))
+
+	
 class Command():
 	def __init__(self,name,data=None,parent=None):
 		self.name,self.data = name,data

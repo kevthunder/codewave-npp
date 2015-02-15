@@ -34,8 +34,8 @@ core.addCmd(command.Command('no_execute',{
 def exec_parent(instance):
 	if instance.parent is not None:
 		res = instance.parent.execute()
-		self.replaceStart = instance.parent.replaceStart
-		self.replaceEnd = instance.parent.replaceEnd
+		instance.replaceStart = instance.parent.replaceStart
+		instance.replaceEnd = instance.parent.replaceEnd
 		return res
 		
 core.addCmd(command.Command('exec_parent',{
@@ -153,9 +153,9 @@ class EditCmd(command.BaseCommand):
 			parser = codewave.Codewave(text_parser.TextParser(self.content))
 			parser.addNameSpace(self.instance.cmd.fullName)
 			parser.parseAll()
-			command.cmds.setCmd(self.cmdName,command.Command(self.cmdName,{
+			command.saveCmd(self.cmdName,{
 				'result': parser.vars['source']
-			}))
+			})
 			return ''
 	def resultWithoutContent(self):
 		if self.cmd and self.editable:

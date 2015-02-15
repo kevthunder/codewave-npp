@@ -1,5 +1,11 @@
 # CodeWave
 
+## ToDo
+
+* detectors
+* fallbacks
+
+
 ## from coffee
 ```
 'True'  => 'True'

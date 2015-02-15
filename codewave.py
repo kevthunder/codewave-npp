@@ -12,7 +12,10 @@ import text_parser
 reload(text_parser)
 import closing_promp
 reload(closing_promp)
+import command
 
+def init():
+	command.loadCmds()
 
 class Codewave():
 	def __init__(self,editor):

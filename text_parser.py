@@ -1,6 +1,8 @@
 import util
+
 class TextParser():
 	def __init__(self,text):
+		self.namespace = 'text_parser'
 		self._text = text
 		self.target = None
 	@property

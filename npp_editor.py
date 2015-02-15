@@ -1,6 +1,8 @@
 import Npp
 
 class NppEditor():
+	def __init__(self):
+		self.namespace = 'npp'
 	def getCursorPos(self):
 		return {'start':Npp.editor.getSelectionStart(), 'end':Npp.editor.getSelectionEnd()}
 	def textSubstr(self,start,end):
