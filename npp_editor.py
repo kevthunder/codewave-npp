@@ -22,3 +22,5 @@ class NppEditor():
 		Npp.editor.beginUndoAction()
 	def endUndoAction(self):
 		Npp.editor.endUndoAction()
+	def getLang(self):
+		return Npp.notepad.getCurrentLang().name

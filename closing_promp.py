@@ -28,15 +28,12 @@ class ClosingPromp():
 		# logger.log('added :'+str(ch))
 		if ch['ch'] ==  32:
 			self.stop()
-			logger.log('space added')
 			self.cleanClose()
 	def cleanClose(self):
 		if self.updateBounds() :
-			# logger.log('closeBounds: '+str(vars(self.closeBounds)))
 			closeStr = self.codewave.editor.textSubstr(self.closeBounds.innerStart,self.closeBounds.innerEnd)
 			self.codewave.editor.spliceText(self.closeBounds.innerStart,self.closeBounds.innerEnd,closeStr.strip())
 			for i in reversed(range(0,Npp.editor.getSelections())):
-				# logger.log('sel no '+str(i)+' ('+str(Npp.editor.getSelectionNStart(i))+','+str(Npp.editor.getSelectionNEnd(i))+')')
 				s = Npp.editor.getSelectionNStart(i)
 				e = Npp.editor.getSelectionNEnd(i)
 				if s >= self.openBounds.innerStart and  s <= self.openBounds.innerEnd :

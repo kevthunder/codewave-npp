@@ -18,18 +18,29 @@ def init():
 	command.loadCmds()
 
 class Codewave():
-	def __init__(self,editor):
-		self.closingPromp = None
-		self.editor = editor
-		self.brakets = '~~'
-		self.deco = '~'
-		self.closeChar = '/'
-		self.noExecuteChar = '!'
-		self.carretChar = '|'
+	def __init__(self,editor,parent = None, **keywords):
+		self.editor,self.parent = editor,parent
+		self.closingPromp = self.context = None
 		self.nameSpaces = []
-		self.checkCarret = True
 		self.vars = {}
-    
+		
+		defaults = {
+			'brakets' : '~~',
+			'deco' : '~',
+			'closeChar' : '/',
+			'noExecuteChar' : '!',
+			'carretChar' : '|',
+			'checkCarret' : True
+		}
+		
+		for key, val in defaults.iteritems():
+			if key in keywords:
+				setattr(self,key,keywords[key])
+			elif parent is not None :
+				setattr(self,key,getattr(parent,key))
+			else:
+				setattr(self,key,val)
+		
 	def onActivationKey(self):
 		logger.log('activation key')
 		cmd = self.commandOnCursorPos()
@@ -167,7 +178,7 @@ class Codewave():
 			pos = cmd.getEndPos()
 			self.editor.setCursorPos(pos)
 			if recursive and cmd.content is not None :
-				parser = Codewave(text_parser.TextParser(cmd.content))
+				parser = Codewave(text_parser.TextParser(cmd.content),parent=self)
 				cmd.content = parser.parseAll()
 			if cmd.init().execute() is not None:
 				if cmd.replaceEnd is not None:
@@ -178,15 +189,26 @@ class Codewave():
 	def getText(self):
 		return self.editor.text
 	def getNameSpaces(self):
-		return ['core'] + self.nameSpaces
+		npcs = set(['core']).union(self.nameSpaces)
+		if self.parent is not None:
+			npcs = npcs.union([self.parent.getNameSpaces()])
+		if self.context is not None:
+			if self.context.finder is not None:
+				npcs = npcs.union(self.context.finder.namespaces)
+			npcs = npcs.union([self.context.cmd.fullName])
+		return list(npcs)
 	def addNameSpace(self,name):
 		self.nameSpaces.append(name)
 	def removeNameSpace(self,name):
 		self.nameSpaces = [ n for n in self.nameSpaces if n != name]
 	def getCmd(self,cmdName,nameSpaces = []) :
-		finder = cmd_finder.CmdFinder(cmdName,self.getNameSpaces() + nameSpaces)
+		finder = self.getFinder(cmdName,nameSpaces)
 		found = finder.find()
 		return found
+	def getFinder(self,cmdName,nameSpaces = []) :
+		return cmd_finder.CmdFinder(cmdName,self.getNameSpaces() + nameSpaces,
+			useDetectors = self.context is None or self.context.finder is None
+		)
 	def getCommentChar(self):
 		return '<!-- %s -->'
 	def wrapComment(self,str):

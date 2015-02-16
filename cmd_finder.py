@@ -1,46 +1,108 @@
 import command
 import core_cmds
+import logger
 
 reload(command)
 reload(core_cmds)
 
 
 class CmdFinder():
-	def __init__(self,name,namespaces):
-		self.name,self.namespaces = name,namespaces
-		self.path = self.name.split(":");
-		self.baseName = self.path.pop()
-		self.root = command.cmds
+	def __init__(self,names,namespaces = None, parent=None, **keywords):
+		if not isinstance(names, list) :
+			names = [names]
+		defaults = {
+			'namespaces' : [],
+			'root' : command.cmds,
+			'mustExecute': True,
+			'useDetectors': True,
+			'instance': None,
+		}
+		self.names = names
+		self.parent = parent
+		if namespaces is not None :
+			keywords['namespaces'] = namespaces 
+		for key, val in defaults.iteritems():
+			if key in keywords:
+				setattr(self,key,keywords[key])
+			elif parent is not None :
+				setattr(self,key,getattr(parent,key))
+			else:
+				setattr(self,key,val)
 	def find(self):
+		self.triggerDetectors()
 		self.cmd = self.findIn(self.root)
 		return self.cmd
+	def getPosibilities(self):
+		self.triggerDetectors()
+		path = list(self.path)
+		return self.findPosibilitiesIn(self.root,path)
+	def getNamesWithPaths(self):
+		paths = {}
+		for name in self.names :
+			parts = name.split(':',1)
+			if len(parts) > 1 and parts[0] not in self.namespaces:
+				if parts[0] not in paths :
+					paths[parts[0]] = []
+				paths[parts[0]].append(parts[1])
+		return paths
+	def applySpaceOnNames(self,space):
+		parts = space.split(':',1)
+		return map(lambda n: self._applySpaceOnName(n,parts) , self.names)
+	def _applySpaceOnName(self,name,spaceParts):
+		parts = name.split(':',1)
+		if len(parts) > 1 and parts[0] == spaceParts[0] :
+			name = parts[1]
+		if len(spaceParts) > 1 :
+			name = spaceParts[1] + ':' + name
+		return name
+	def getDirectNames(self):
+		return [n for n in self.names if ':' not in n]
+	def triggerDetectors(self):
+		if self.useDetectors :
+			self.useDetectors = False
+			posibilities = CmdFinder(self.namespaces,parent=self,mustExecute=False).findPosibilities()
+			for cmd in posibilities :
+				for detector in cmd.detectors :
+					res = detector.detect(self)
+					self.addNamespaces(res)
+	def addNamespaces(self,spaces):
+		if spaces :
+			if not isinstance(spaces, list) :
+				spaces = [spaces]
+			for space in spaces :
+				if space not in self.namespaces :
+					self.namespaces.append(space)
 	def findIn(self,cmd,path = None):
 		if cmd is None:
 			return None
-		# Npp.console.write('find: '+self.name+' In: '+str(cmd.fullName)+' path: '+str(path)+'\n')
-		if path is None:
-			path = list(self.path)
-		cmd.init()
-		best = self.bestInPosibilities(self.findPosibilitiesIn(cmd,path))
+		best = self.bestInPosibilities(self.findPosibilities())
 		if best is not None:
 			return best
-		elif len(path) <= 0:
-			direct = cmd.getCmd(self.baseName)
-			if direct is not None and direct.init().isExecutable():
-				return direct
-	def findPosibilitiesIn(self,cmd,path):
+	def findPosibilities(self):
+		if self.root is None:
+			return []
+		self.root.init()
 		posibilities = []
-		if len(path) > 0:
-			pos = self.findIn(cmd.getCmd(path[0]),path[1:])
-			if pos is not None:
-				posibilities.append(pos)
+		for space, names in self.getNamesWithPaths().iteritems():
+			next = self.root.getCmd(space)
+			if next is not None :
+				posibilities += CmdFinder(names,parent=self,root=next).findPosibilities()
 		for nspc in self.namespaces:
 			nspcPath = nspc.split(":");
 			nspcName = nspcPath.pop(0)
-			pos = self.findIn(cmd.getCmd(nspcName),nspcPath + path)
-			if pos is not None:
-				posibilities.append(pos)
+			next = self.root.getCmd(nspcName)
+			if next is not None :
+				posibilities += CmdFinder(self.applySpaceOnNames(nspc),parent=self,root=next).findPosibilities()
+		for name in self.getDirectNames():
+			direct = self.root.getCmd(name)
+			if self.cmdIsValid(direct):
+				posibilities += [direct]
 		return posibilities
+	def cmdIsValid(self,cmd):
+		if cmd is None:
+			return False
+		cmd.init()
+		return not self.mustExecute or cmd.isExecutable()
 	def bestInPosibilities(self,poss):
 		if len(poss) > 0:
 			best = None

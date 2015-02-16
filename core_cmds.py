@@ -1,12 +1,12 @@
 import command
-import codewave
 import util
+import logger
 import re
-import text_parser
-reload(text_parser)
 import textwrap
+import detector
 
 core = command.cmds.addCmd(command.Command('core'))
+core.addDetector(detector.LangDetector())
 
 def set_var(name,instance):
 	val = None
@@ -46,6 +46,7 @@ core.addCmd(command.Command('exec_parent',{
 class BoxCmd(command.BaseCommand):
 	def __init__(self,instance):
 		self.instance = instance
+		
 		if self.instance.content:
 			bounds = self.textBounds(self.instance.content)
 			self.width,self.height = bounds.width, bounds.height
@@ -150,8 +151,7 @@ class EditCmd(command.BaseCommand):
 		else:
 			return self.resultWithoutContent()
 	def resultWithContent(self):
-			parser = codewave.Codewave(text_parser.TextParser(self.content))
-			parser.addNameSpace(self.instance.cmd.fullName)
+			parser = self.instance.getParserForText(self.content)
 			parser.parseAll()
 			command.saveCmd(self.cmdName,{
 				'result': parser.vars['source']
@@ -159,16 +159,15 @@ class EditCmd(command.BaseCommand):
 			return ''
 	def resultWithoutContent(self):
 		if self.cmd and self.editable:
-			parser = codewave.Codewave(text_parser.TextParser(textwrap.dedent(
+			parser = self.instance.getParserForText(textwrap.dedent(
 				"""
 				~~box cmd:"%(cmd)s"~~
-				~~source~~
+				~~!source~~
 				%(source)s
 				~~/source~~
 				~~!save~~ ~~!close~~
 				~~/box~~
-				""") % {'cmd': self.instance.cmd.fullName + ' ' +self.cmd.name, 'source': self.cmd.resultStr}))
-			parser.checkCarret = False
+				""") % {'cmd': self.instance.cmd.fullName + ' ' +self.cmd.name, 'source': self.cmd.resultStr})
 			return parser.getText() if self.verbalize else parser.parseAll()
 		
 core.addCmd(command.Command('edit',{
@@ -180,3 +179,47 @@ core.addCmd(command.Command('edit',{
 	},
 	'cls' : EditCmd
 }))
+
+
+class NameSpaceCmd(command.BaseCommand):
+	def __init__(self,instance):
+		self.instance = instance
+	def result(self):
+		namespaces = self.instance.finder.namespaces
+		txt = '~~box~~\n'
+		for nspc in namespaces :
+			txt += nspc+'\n'
+		txt += '~~!close|~~\n~~/box~~'
+		parser = self.instance.getParserForText(txt)
+		return parser.parseAll()
+		
+core.addCmd(command.Command('namespace',{
+	'cls' : NameSpaceCmd
+}))
+core.addCmd(command.Command('nspc',{
+	'aliasOf' : 'core:namespace'
+}))
+
+
+class EmmetCmd(command.BaseCommand):
+	def __init__(self,instance):
+		self.instance = instance
+		self.abbr = self.instance.getParam([0,'abbr','abbreviation'])
+		self.lang = self.instance.getParam([1,'lang','language'])
+	def result(self):
+		import Npp
+		import sys
+		import os.path
+		emmet_path = os.path.join(Npp.notepad.getNppDir(),'plugins','EmmetNPP')
+		if emmet_path not in sys.path :
+			sys.path.insert(0, emmet_path)
+		import npp_emmet
+		res = npp_emmet.ctx.js().locals.emmet.expandAbbreviation(self.abbr)
+		if '${0}' in res :
+			res = res.replace('${0}','|')
+		return res
+		
+core.addCmd(command.Command('emmet',{
+	'cls' : EmmetCmd
+}))
+

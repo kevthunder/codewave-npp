@@ -1,6 +1,10 @@
 import util
 import re
+import logger
 import command
+import codewave
+import text_parser
+reload(text_parser)
 
 class CmdInstance():
 	def __init__(self,codewave,pos,str):
@@ -113,7 +117,9 @@ class CmdInstance():
 		if self.noBracket[0:len(self.codewave.noExecuteChar)] == self.codewave.noExecuteChar:
 			self.cmd = command.cmds.getCmd('core:no_execute')
 		else:
-			self.cmd = self.codewave.getCmd(self.cmdName,self._getParentNamespaces())
+			self.finder = self.codewave.getFinder(self.cmdName,self._getParentNamespaces())
+			self.finder.instance = self
+			self.cmd = self.finder.find()
 		if self.cmd is not None:
 			self.cmdObj = self.cmd.getExecutableObj(self)
 		return self.cmd
@@ -155,6 +161,11 @@ class CmdInstance():
 	def result(self): 
 			if self.cmd.resultIsAvailable():
 				self.cmd.result(self)
+	def getParserForText(self,txt):
+		parser = codewave.Codewave(text_parser.TextParser(txt))
+		parser.context = self
+		parser.checkCarret = False
+		return parser
 	def getEndPos(self):
 		return self.pos+len(self.str)
 	def getIndent(self):

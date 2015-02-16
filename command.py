@@ -26,6 +26,7 @@ class Command():
 	def __init__(self,name,data=None,parent=None):
 		self.name,self.data = name,data
 		self.cmds = []
+		self.detectors = []
 		self.executeFunct = self.resultFunct = self.resultStr = self.aliasOf = self.cls = None
 		self.aliassed = None
 		self.fullName = self.name
@@ -162,6 +163,9 @@ class Command():
 		else:
 			self.addCmd(cmd)
 			return cmd
+	def addDetector(self,detector):
+		self.detectors.append(detector)
+			
 	
 class BaseCommand():
 	def __init__(self,instance):
