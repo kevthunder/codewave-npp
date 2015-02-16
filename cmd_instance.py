@@ -23,6 +23,8 @@ class CmdInstance():
 		if not self.isEmpty():
 			self._getParentCmds()
 			self._getCmd()
+			self._parseParams(self.rawParams)
+			self._getCmdObj()
 		return self
 	def _checkCloser(self):
 		noBracket = self._removeBracket(self.str)
@@ -43,10 +45,14 @@ class CmdInstance():
 	def _splitComponents(self):
 		parts = self.noBracket.split(" ");
 		self.cmdName = parts.pop(0)
-		self._parseParams(" ".join(parts))
+		self.rawParams = " ".join(parts)
 	def _parseParams(self,params):
 		self.params = []
 		self.named = {}
+		if self.cmd is not None : 
+			self.named.update(self.cmd.getDefaults(self))
+			if self.cmd.nameToParam is not None :
+				self.named[self.cmd.nameToParam] = self.cmdName
 		if len(params):
 			inStr = False
 			param = ''
@@ -120,9 +126,10 @@ class CmdInstance():
 			self.finder = self.codewave.getFinder(self.cmdName,self._getParentNamespaces())
 			self.finder.instance = self
 			self.cmd = self.finder.find()
+		return self.cmd
+	def _getCmdObj(self):
 		if self.cmd is not None:
 			self.cmdObj = self.cmd.getExecutableObj(self)
-		return self.cmd
 	def _getParentNamespaces(self):
 		nspcs = []
 		obj = self

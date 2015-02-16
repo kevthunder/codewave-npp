@@ -5,8 +5,57 @@ import re
 import textwrap
 import detector
 
-core = command.cmds.addCmd(command.Command('core'))
-core.addDetector(detector.LangDetector())
+reload(detector)
+
+
+def initCmds():
+	core = command.cmds.addCmd(command.Command('core'))
+	core.addDetector(detector.LangDetector())
+	
+	core.addCmds({
+		'no_execute':{
+			'result' : no_execute
+		},
+		'exec_parent':{
+			'execute' : exec_parent
+		},
+		'box':{
+			'cls' : BoxCmd
+		},
+		'close':{
+			'cls' : CloseCmd
+		},
+		'edit':{
+			'cmds' : {
+				'source': makeVarCmd('source'),
+				'save':{
+					'aliasOf': 'core:exec_parent'
+				}
+			},
+			'cls' : EditCmd
+		},
+		'namespace':{
+			'cls' : NameSpaceCmd
+		},
+		'nspc':{
+			'aliasOf' : 'core:namespace'
+		},
+		'emmet':{
+			'cls' : EmmetCmd
+		},
+		
+	})
+	
+	html = command.cmds.addCmd(command.Command('html'))
+	html.addCmds({
+		'fallback':{
+			'aliasOf' : 'core:emmet',
+			'defaults' : {'lang':'html'},
+			'nameToParam' : 'abbr'
+		},
+	})
+	
+command.cmdIniters.add(initCmds)
 
 def set_var(name,instance):
 	val = None
@@ -27,9 +76,6 @@ def no_execute(instance):
 	reg = re.compile("^("+util.escapeRegExp(instance.codewave.brakets) + ')' + util.escapeRegExp(instance.codewave.noExecuteChar))
 	return re.sub(reg, r'\1', instance.str)
 
-core.addCmd(command.Command('no_execute',{
-	'result' : no_execute
-}))
 
 def exec_parent(instance):
 	if instance.parent is not None:
@@ -38,10 +84,6 @@ def exec_parent(instance):
 		instance.replaceEnd = instance.parent.replaceEnd
 		return res
 		
-core.addCmd(command.Command('exec_parent',{
-	'execute' : exec_parent
-}))
-
 
 class BoxCmd(command.BaseCommand):
 	def __init__(self,instance):
@@ -109,10 +151,6 @@ class BoxCmd(command.BaseCommand):
 		return util.getTxtSize(self.instance.codewave.removeCarret(text))
 		
 
-core.addCmd(command.Command('box',{
-	'cls' : BoxCmd
-}))
-
 class CloseCmd(command.BaseCommand):
 	def __init__(self,instance):
 		self.instance = instance
@@ -133,9 +171,6 @@ class CloseCmd(command.BaseCommand):
 			self.instance.replaceWith('')
 
 
-core.addCmd(command.Command('close',{
-	'cls' : CloseCmd
-}))
 
 class EditCmd(command.BaseCommand):
 	def __init__(self,instance):
@@ -169,16 +204,7 @@ class EditCmd(command.BaseCommand):
 				~~/box~~
 				""") % {'cmd': self.instance.cmd.fullName + ' ' +self.cmd.name, 'source': self.cmd.resultStr})
 			return parser.getText() if self.verbalize else parser.parseAll()
-		
-core.addCmd(command.Command('edit',{
-	'cmds' : {
-		'source': makeVarCmd('source'),
-		'save':{
-      'aliasOf': 'core:exec_parent'
-		}
-	},
-	'cls' : EditCmd
-}))
+
 
 
 class NameSpaceCmd(command.BaseCommand):
@@ -192,13 +218,7 @@ class NameSpaceCmd(command.BaseCommand):
 		txt += '~~!close|~~\n~~/box~~'
 		parser = self.instance.getParserForText(txt)
 		return parser.parseAll()
-		
-core.addCmd(command.Command('namespace',{
-	'cls' : NameSpaceCmd
-}))
-core.addCmd(command.Command('nspc',{
-	'aliasOf' : 'core:namespace'
-}))
+
 
 
 class EmmetCmd(command.BaseCommand):
@@ -218,8 +238,5 @@ class EmmetCmd(command.BaseCommand):
 		if '${0}' in res :
 			res = res.replace('${0}','|')
 		return res
-		
-core.addCmd(command.Command('emmet',{
-	'cls' : EmmetCmd
-}))
+
 

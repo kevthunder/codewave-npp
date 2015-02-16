@@ -15,7 +15,9 @@ class CmdFinder():
 			'root' : command.cmds,
 			'mustExecute': True,
 			'useDetectors': True,
+			'useFallbacks': True,
 			'instance': None,
+			'codewave': None
 		}
 		self.names = names
 		self.parent = parent
@@ -60,7 +62,7 @@ class CmdFinder():
 	def triggerDetectors(self):
 		if self.useDetectors :
 			self.useDetectors = False
-			posibilities = CmdFinder(self.namespaces,parent=self,mustExecute=False).findPosibilities()
+			posibilities = CmdFinder(self.namespaces,parent=self,mustExecute=False,useFallbacks=False).findPosibilities()
 			for cmd in posibilities :
 				for detector in cmd.detectors :
 					res = detector.detect(self)
@@ -97,6 +99,10 @@ class CmdFinder():
 			direct = self.root.getCmd(name)
 			if self.cmdIsValid(direct):
 				posibilities += [direct]
+		if self.useFallbacks:
+			fallback = self.root.getCmd('fallback')
+			if self.cmdIsValid(fallback):
+				posibilities += [fallback]
 		return posibilities
 	def cmdIsValid(self,cmd):
 		if cmd is None:
@@ -106,7 +112,12 @@ class CmdFinder():
 	def bestInPosibilities(self,poss):
 		if len(poss) > 0:
 			best = None
+			bestScore = None
 			for p in poss:
-				if best is None or p.depth >= best.depth:
+				score = p.depth
+				if p.name == 'fallback' :
+					  score -= 1000
+				if best is None or score >= bestScore:
+					bestScore = score
 					best = p
 			return best;

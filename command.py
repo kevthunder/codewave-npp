@@ -1,9 +1,22 @@
 import storage
+import logger
 reload(storage)
 
-def _optKey(key,dict): 
+def _optKey(key,dict,defVal = None): 
 	# optional Dictionary key
-	return dict[key] if key in dict else None
+	return dict[key] if key in dict else defVal
+
+cmdIniters = set()
+def initCmds():
+	global cmds
+	global cmdIniters
+	cmds = Command(None,{
+		'cmds':{
+			'hello':'Hello, World!'
+		}
+	})
+	for initer in cmdIniters:
+		initer()
 
 def saveCmd(fullname,data):
 	global cmds
@@ -33,6 +46,8 @@ class Command():
 		self.depth = 0
 		self._parent, self._inited = None, False
 		self.setParent(parent)
+		self.defaults = {}
+		self.nameToParam = None
 	@property
 	def parent(self):
 			return self._parent
@@ -71,6 +86,15 @@ class Command():
 			if getattr(self, p) is not None:
 				return True
 		return False
+	def getDefaults(self,instance = None):
+		res = {}
+		aliassed = self.getAliassed(instance.codewave)
+		if aliassed is not None :
+			res.update(aliassed.getDefaults(instance))
+		res.update(self.defaults)
+		if instance is not None and instance.cmdObj is not None:
+			res.update(instance.cmdObj.getDefaults())
+		return res;
 	def result(self,instance):
 		if instance.cmdObj is not None:
 			return instance.cmdObj.result()
@@ -123,8 +147,12 @@ class Command():
 			self.executeFunct = execute
 		self.aliasOf = _optKey('aliasOf',data)
 		self.cls = _optKey('cls',data)
+		self.defaults = _optKey('defaults',data,self.defaults)
+		self.nameToParam = _optKey('nameToParam',data)
 		if 'help' in data :
 			self.addCmd(self,Command('help',data['help'],self))
+		if 'fallback' in data :
+			self.addCmd(self,Command('fallback',data['fallback'],self))
 		if 'cmds' in data :
 			self.addCmds(data['cmds'])
 		return True
@@ -172,10 +200,7 @@ class BaseCommand():
 		self.instance = instance
 	def resultIsAvailable(self):
 		return hasattr(self,"result")
+	def getDefaults(self):
+		return {}
 				
-if 'cmds' not in vars() : # if True :
-	cmds = Command(None,{
-		'cmds':{
-			'hello':'Hello, World!'
-		}
-	})
+				

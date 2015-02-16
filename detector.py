@@ -8,4 +8,5 @@ class Detector():
 
 class LangDetector(Detector):
 	def detect(self,finder):
-		return finder.instance.codewave.editor.getLang().lower()
+		if finder.codewave is not None :
+			return finder.codewave.editor.getLang().lower()

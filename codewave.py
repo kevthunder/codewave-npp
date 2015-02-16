@@ -15,6 +15,7 @@ reload(closing_promp)
 import command
 
 def init():
+	command.initCmds()
 	command.loadCmds()
 
 class Codewave():
@@ -207,7 +208,8 @@ class Codewave():
 		return found
 	def getFinder(self,cmdName,nameSpaces = []) :
 		return cmd_finder.CmdFinder(cmdName,self.getNameSpaces() + nameSpaces,
-			useDetectors = self.context is None or self.context.finder is None
+			useDetectors = self.context is None or self.context.finder is None,
+			codewave = self
 		)
 	def getCommentChar(self):
 		return '<!-- %s -->'
