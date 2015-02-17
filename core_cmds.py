@@ -13,8 +13,27 @@ def initCmds():
 	core.addDetector(detector.LangDetector())
 	
 	core.addCmds({
+		'help':{
+			'result' : textwrap.dedent(
+				"""
+				~~box~~
+				~~quote_carret~~
+					___         _   __      __
+				 / __|___  __| |__\ \    / /_ ___ ______
+				/ /__/ _ \/ _` / -_\ \/\/ / _` \ V / -_/
+				\____\___/\__,_\___|\_/\_/\__,_|\_/\___|
+				The text editor helper
+				~~/quote_carret~~
+				~~!close|~~
+				~~/box~~
+				""")
+		},
 		'no_execute':{
 			'result' : no_execute
+		},
+		'quote_carret':{
+			'result' : quote_carret,
+			'checkCarret' : False
 		},
 		'exec_parent':{
 			'execute' : exec_parent
@@ -76,7 +95,8 @@ def no_execute(instance):
 	reg = re.compile("^("+util.escapeRegExp(instance.codewave.brakets) + ')' + util.escapeRegExp(instance.codewave.noExecuteChar))
 	return re.sub(reg, r'\1', instance.str)
 
-
+def quote_carret(instance):
+	return instance.content.replace('|', '||')
 def exec_parent(instance):
 	if instance.parent is not None:
 		res = instance.parent.execute()

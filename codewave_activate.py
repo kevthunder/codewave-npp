@@ -6,8 +6,8 @@ reload(codewave_npp.npp_editor)
 import codewave_npp.logger
 reload(codewave_npp.logger)
 
-
-if 'cw' not in vars() or cw is None :
+debug = True
+if debug or 'cw' not in vars() or cw is None :
 	codewave_npp.codewave.init()
 	codewave_npp.logger.log('init codewave');
 	cw = codewave_npp.codewave.Codewave(codewave_npp.npp_editor.NppEditor())

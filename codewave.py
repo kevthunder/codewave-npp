@@ -192,7 +192,7 @@ class Codewave():
 	def getNameSpaces(self):
 		npcs = set(['core']).union(self.nameSpaces)
 		if self.parent is not None:
-			npcs = npcs.union([self.parent.getNameSpaces()])
+			npcs = npcs.union(self.parent.getNameSpaces())
 		if self.context is not None:
 			if self.context.finder is not None:
 				npcs = npcs.union(self.context.finder.namespaces)
@@ -208,9 +208,11 @@ class Codewave():
 		return found
 	def getFinder(self,cmdName,nameSpaces = []) :
 		return cmd_finder.CmdFinder(cmdName,self.getNameSpaces() + nameSpaces,
-			useDetectors = self.context is None or self.context.finder is None,
+			useDetectors = self.isRoot(),
 			codewave = self
 		)
+	def isRoot(self):
+		return self.parent is None and (self.context is None or self.context.finder is None)
 	def getCommentChar(self):
 		return '<!-- %s -->'
 	def wrapComment(self,str):
@@ -233,5 +235,11 @@ class Codewave():
 			return str + cc[i+2:]
 		else:
 			return str + ' ' + cc
-	def removeCarret(self,str):
-		return str.replace(self.carretChar, '');
+	def removeCarret(self,txt):
+		return txt.replace(self.carretChar+self.carretChar, '[[[[quoted_carret]]]]') \
+							.replace(self.carretChar, '') \
+							.replace('[[[[quoted_carret]]]]', self.carretChar)
+	def getCarretPos(self,txt):
+		txt = txt.replace(self.carretChar+self.carretChar, ' ')
+		if self.carretChar in txt :
+			return txt.index(self.carretChar)

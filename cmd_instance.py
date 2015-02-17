@@ -11,6 +11,7 @@ class CmdInstance():
 		self.codewave,self.pos,self.str = codewave,pos,str
 		self.content = self.cmdObj = self.closingPos = None
 		self.replaceStart = self.replaceEnd = None
+		self.aliasedCmd = self.cmdOptions = None
 		if not self.isEmpty():
 			self._checkCloser()
 			self.opening = self.str
@@ -51,8 +52,9 @@ class CmdInstance():
 		self.named = {}
 		if self.cmd is not None : 
 			self.named.update(self.cmd.getDefaults(self))
-			if self.cmd.nameToParam is not None :
-				self.named[self.cmd.nameToParam] = self.cmdName
+			nameToParam = self.cmd.getOption('nameToParam',self)
+			if nameToParam is not None :
+				self.named[nameToParam] = self.cmdName
 		if len(params):
 			inStr = False
 			param = ''
@@ -161,6 +163,10 @@ class CmdInstance():
 			if self.cmd.resultIsAvailable(self):
 				res = self.cmd.result(self)
 				if res is not None:
+					if self.cmd.getOption('parse',self) :
+						parser = self.getParserForText(res)
+						logger.log('parsed ?',self)
+						res = parser.parseAll()
 					self.replaceWith(res)
 					return True
 			else:
@@ -183,11 +189,11 @@ class CmdInstance():
 		text = self.applyIndent(text)
 		
 		cursorPos = self.pos+len(text)
-		if self.codewave.checkCarret:
-			if self.codewave.carretChar in text :
-				p = text.index(self.codewave.carretChar)
-				text = self.codewave.removeCarret(text)
+		if self.codewave.checkCarret and self.cmd.getOption('checkCarret',self):
+			p = self.codewave.getCarretPos(text)
+			if p is not None :
 				cursorPos = self.pos+p
+			text = self.codewave.removeCarret(text)
 			
 			
 		self.codewave.editor.spliceText(self.pos,self.getEndPos(),text)

@@ -41,13 +41,20 @@ class Command():
 		self.cmds = []
 		self.detectors = []
 		self.executeFunct = self.resultFunct = self.resultStr = self.aliasOf = self.cls = None
-		self.aliassed = None
+		self.aliased = None
 		self.fullName = self.name
 		self.depth = 0
 		self._parent, self._inited = None, False
 		self.setParent(parent)
 		self.defaults = {}
-		self.nameToParam = None
+		
+		self.defaultOptions = {
+			'nameToParam' : None,
+			'checkCarret' : True,
+			'parse' : False,
+		}
+		self.options = {}
+		self.finalOptions = None
 	@property
 	def parent(self):
 			return self._parent
@@ -88,9 +95,9 @@ class Command():
 		return False
 	def getDefaults(self,instance = None):
 		res = {}
-		aliassed = self.getAliassed(instance.codewave)
-		if aliassed is not None :
-			res.update(aliassed.getDefaults(instance))
+		aliased = self.getAliased(instance)
+		if aliased is not None :
+			res.update(aliased.getDefaults(instance))
 		res.update(self.defaults)
 		if instance is not None and instance.cmdObj is not None:
 			res.update(instance.cmdObj.getDefaults())
@@ -98,9 +105,9 @@ class Command():
 	def result(self,instance):
 		if instance.cmdObj is not None:
 			return instance.cmdObj.result()
-		aliassed = self.getAliassed(instance.codewave)
-		if aliassed is not None :
-			return aliassed.result(instance)
+		aliased = self.getAliased(instance)
+		if aliased is not None :
+			return aliased.result(instance)
 		if self.resultFunct is not None:
 			return self.resultFunct(instance)
 		if self.resultStr is not None:
@@ -108,26 +115,54 @@ class Command():
 	def execute(self,instance):
 		if instance.cmdObj is not None:
 			return instance.cmdObj.execute()
-		aliassed = self.getAliassed(instance.codewave)
-		if aliassed is not None :
-			return aliassed.execute(instance)
+		aliased = self.getAliased(instance)
+		if aliased is not None :
+			return aliased.execute(instance)
 		if self.executeFunct is not None:
 			return self.executeFunct(instance)
 	def getExecutableObj(self,instance):
 		self.init()
 		if self.cls is not None :
 			return self.cls(instance)
-		aliassed = self.getAliassed(instance.codewave)
-		if aliassed is not None :
-			return aliassed.getExecutableObj(instance)
-	def getAliassed(self,codewave = None):
+		aliased = self.getAliased(instance)
+		if aliased is not None :
+			return aliased.getExecutableObj(instance)
+	def getAliased(self,instance = None):
+		if instance is not None and instance.cmd == self and instance.aliasedCmd is not None :
+			return instance.aliasedCmd or None
 		if self.aliasOf is not None :
-			if self.aliassed is None :
-				if codewave is None :
-					from codewave import Codewave
-					codewave = Codewave()
-				self.aliassed = codewave.getCmd(self.aliasOf) or False
-			return self.aliassed or None
+			if instance is None :
+				from codewave import Codewave
+				codewave = Codewave()
+			else :
+				codewave = instance.codewave
+			aliased = codewave.getCmd(self.aliasOf)
+			if instance is not None :
+				instance.aliasedCmd = aliased or False
+			return aliased
+	def setOptions(self,data):
+		for key, val in data.iteritems():
+			if key in self.defaultOptions:
+				self.options[key] = val
+	def getOptions(self,instance = None):
+		if instance is not None and instance.cmdOptions is not None :
+			return instance.cmdOptions
+			
+		opt = {}
+		opt.update(self.defaultOptions)
+		aliased = self.getAliased(instance)
+		if aliased is not None :
+			opt.update(aliased.getOptions(instance))
+		opt.update(self.options)
+		if instance is not None and instance.cmdObj is not None:
+			opt.update(instance.cmdObj.getOptions())
+		if instance is not None :
+			instance.cmdOptions = opt
+		return opt
+	def getOption(self,key,instance = None):
+		options = self.getOptions(instance)
+		if key in options:
+			return options[key]
 	def parseData(self,data):
 		self.data = data
 		if isinstance(data, str):
@@ -140,15 +175,18 @@ class Command():
 		res = _optKey('result',data)
 		if hasattr(res, '__call__') :
 			self.resultFunct = res
-		else :
+		elif res is not None :
 			self.resultStr = res
+			self.options['parse'] = True
 		execute = _optKey('execute',data)
 		if hasattr(execute, '__call__') :
 			self.executeFunct = execute
 		self.aliasOf = _optKey('aliasOf',data)
 		self.cls = _optKey('cls',data)
 		self.defaults = _optKey('defaults',data,self.defaults)
-		self.nameToParam = _optKey('nameToParam',data)
+		
+		self.setOptions(data)
+		
 		if 'help' in data :
 			self.addCmd(self,Command('help',data['help'],self))
 		if 'fallback' in data :
@@ -201,6 +239,8 @@ class BaseCommand():
 	def resultIsAvailable(self):
 		return hasattr(self,"result")
 	def getDefaults(self):
+		return {}
+	def getOptions(self):
 		return {}
 				
 				
