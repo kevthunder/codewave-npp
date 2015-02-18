@@ -1,4 +1,6 @@
 import Npp
+import sys
+import os.path
 
 class NppEditor():
 	def __init__(self):
@@ -24,3 +26,10 @@ class NppEditor():
 		Npp.editor.endUndoAction()
 	def getLang(self):
 		return Npp.notepad.getCurrentLang().name
+	def getEmmetContextObject(self):
+		emmet_path = os.path.join(Npp.notepad.getNppDir(),'plugins','EmmetNPP')
+		if emmet_path not in sys.path :
+			sys.path.insert(0, emmet_path)
+		import npp_emmet
+		return npp_emmet.ctx
+		

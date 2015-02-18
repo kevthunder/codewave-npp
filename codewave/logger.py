@@ -1,4 +1,4 @@
-import Npp
+WRITE_FUNCT = None
 
 last_log = None
 
@@ -10,7 +10,10 @@ def log(*arguments):
 		if(hasattr(msg,"__class__") and hasattr(msg,"__dict__")):
 			msg = '<'+msg.__class__.__module__+'.'+msg.__class__.__name__+' '+str(vars(msg))+'>'
 		out += str(msg)+' '
-	Npp.console.write(out+'\n')
+		if WRITE_FUNCT is not None :
+			WRITE_FUNCT(out+'\n')
+		else : 
+			raise Exception("Logger write function is not setted")
 
 def step(prop):
 	global last_log
