@@ -7,8 +7,7 @@ Create abbreviation for you own code snippets and expand them with a push of a b
 ## Installation
 
 1. Install Python Script for Notepad++ http://npppythonscript.sourceforge.net/
-2. Get the code :
-```sh
+2. Get the code : ```sh
 cd "~/AppData/Roaming/Notepad++/plugins/config/PythonScript/scripts/"
 git clone https://github.com/kevthunder/codewave-npp.git codewave_npp
 ```

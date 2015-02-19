@@ -1,8 +1,10 @@
 import Npp
 import sys
 import os.path
+import codewave.editor
+import codewave.util
 
-class NppEditor():
+class NppEditor(codewave.editor.Editor):
 	def __init__(self):
 		self.namespace = 'npp'
 	def getCursorPos(self):
@@ -32,4 +34,25 @@ class NppEditor():
 			sys.path.insert(0, emmet_path)
 		import npp_emmet
 		return npp_emmet.ctx
+	def allowMultiSelection(self):
+		return True
+	def setMultiSel(self,selections):
+		first = selections.pop(0)
+		if first is not None :
+			Npp.editor.setSelection(first.start, first.end)
+		for sel in selections :
+			Npp.editor.addSelection(sel.start, sel.end)
+	def getMultiSel(self):
+		selections = []
+		for i in range(0,Npp.editor.getSelections()):
+			selections.append(codewave.util.Pos(Npp.editor.getSelectionNStart(i), Npp.editor.getSelectionNEnd(i)))
+		return selections
+	def canListenToChange(self):
+		return True
+	def addChangeListener(self,callback):
+		Npp.editor.callback(callback, [Npp.SCINTILLANOTIFICATION.CHARADDED])
+	def removeChangeListener(self,callback):
+		# Bug : Cant remove the callback only for some reason
+		Npp.editor.clearCallbacks(callback)
+		Npp.editor.clearCallbacks([Npp.SCINTILLANOTIFICATION.CHARADDED]) 
 		
