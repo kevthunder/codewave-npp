@@ -1,22 +1,13 @@
-import logger
-reload(logger)
+import codewave_core.logger as logger
 
-import util
-reload(util)
+import codewave_core.util as util
 
-import cmd_instance
-reload(cmd_instance)
-import cmd_finder
-reload(cmd_finder)
-import text_parser
-reload(text_parser)
-import closing_promp
-reload(closing_promp)
-import command
+import codewave_core.cmd_instance as cmd_instance
+import codewave_core.cmd_finder as cmd_finder
+import codewave_core.text_parser as text_parser
+import codewave_core.closing_promp as closing_promp
+import codewave_core.command as command
 
-def init():
-	command.initCmds()
-	command.loadCmds()
 
 class Codewave():
 	def __init__(self,editor,parent = None, **keywords):
@@ -34,14 +25,15 @@ class Codewave():
 			'checkCarret' : True
 		}
 		
-		for key, val in defaults.iteritems():
+		for key, val in defaults.items():
 			if key in keywords:
 				setattr(self,key,keywords[key])
 			elif parent is not None :
 				setattr(self,key,getattr(parent,key))
 			else:
 				setattr(self,key,val)
-		
+		if self.editor is not None :
+			self.editor.bindedTo(self) 
 	def onActivationKey(self):
 		logger.log('activation key')
 		cmd = self.commandOnCursorPos()
@@ -62,11 +54,11 @@ class Codewave():
 		if self.precededByBrakets(pos) and self.followedByBrakets(pos) and self.countPrevBraket(pos) % 2 == 1 :
 			prev = pos-len(self.brakets)
 			next = pos
-		else :
+		else:
 			if self.precededByBrakets(pos) and self.countPrevBraket(pos) % 2 == 0:
 				pos -= len(self.brakets)
 			prev = self.findPrevBraket(pos)
-			if prev is None :
+			if prev is None:
 				return None 
 			next = self.findNextBraket(pos-1)
 			if next is None or self.countPrevBraket(prev) % 2 != 0 :
@@ -82,7 +74,7 @@ class Codewave():
 			pos = f.pos + len(f.str)
 			if f.str == self.brakets:
 				if beginning is not None:
-					return cmd_instance.CmdInstance(self,beginning,self.editor.textSubstr(beginning,f.pos+len(self.brakets)))
+					return cmd_instance.CmdInstance(self, beginning, self.editor.textSubstr(beginning, f.pos+len(self.brakets)))
 				else:
 					beginning = f.pos
 			else:
@@ -101,7 +93,7 @@ class Codewave():
 				if cmd.pos < pos:
 					return cmd
 			else:
-				cpos = p+len(losingPrefix)
+				cpos = p+len(closingPrefix)
 	def precededByBrakets(self,pos):
 		return self.editor.textSubstr(pos-len(self.brakets),pos) == self.brakets
 	def followedByBrakets(self,pos):
@@ -140,8 +132,11 @@ class Codewave():
 				start, end = pos, pos + len(stri) * direction
 				if end < start :
 					start, end = end, start
-				if stri == self.editor.textSubstr(start,end) :
-					return util.StrPos(pos-len(stri) if direction < 0 else pos,stri)
+				if stri == self.editor.textSubstr(start,end):
+					return util.StrPos(
+					   pos-len(stri) if direction < 0 else pos,
+					   stri
+					)
 			pos += direction
 	def findMatchingPair(self,startPos,opening,closing,direction = 1):
 		pos = startPos
@@ -160,9 +155,9 @@ class Codewave():
 				nested+=1
 		return None
 	def addBrakets(self,start, end):
-		if start == end :
+		if start == end:
 			self.editor.insertTextAt(self.brakets+self.brakets,start)
-		else :
+		else:
 			self.editor.insertTextAt(self.brakets,end)
 			self.editor.insertTextAt(self.brakets,start)
 		self.editor.setCursorPos(end+len(self.brakets))
@@ -202,22 +197,30 @@ class Codewave():
 		self.nameSpaces.append(name)
 	def removeNameSpace(self,name):
 		self.nameSpaces = [ n for n in self.nameSpaces if n != name]
-	def getCmd(self,cmdName,nameSpaces = []) :
+	def getCmd(self,cmdName,nameSpaces = []):
 		finder = self.getFinder(cmdName,nameSpaces)
 		found = finder.find()
 		return found
-	def getFinder(self,cmdName,nameSpaces = []) :
-		return cmd_finder.CmdFinder(cmdName,self.getNameSpaces() + nameSpaces,
+	def getFinder(self,cmdName,nameSpaces = []):
+		return cmd_finder.CmdFinder(cmdName,
+            namespaces = util.union(self.getNameSpaces(), nameSpaces),
 			useDetectors = self.isRoot(),
 			codewave = self
 		)
 	def isRoot(self):
 		return self.parent is None and (self.context is None or self.context.finder is None)
+	def getRoot(self):
+		if self.isRoot:
+			return self
+		elif self.parent is not None:
+			return self.parent.getRoot()
+		elif self.context is not None:
+			return self.context.codewave.getRoot()
 	def getCommentChar(self):
 		return '<!-- %s -->'
 	def wrapComment(self,str):
 		cc = self.getCommentChar()
-		if '%s' in cc :
+		if '%s' in cc:
 			return cc.replace('%s',str)
 		else:
 			return cc + ' ' + str + ' ' + cc
@@ -243,3 +246,7 @@ class Codewave():
 		txt = txt.replace(self.carretChar+self.carretChar, ' ')
 		if self.carretChar in txt :
 			return txt.index(self.carretChar)
+
+def init():
+	command.initCmds()
+	command.loadCmds()

@@ -1,38 +1,11 @@
-import storage
-import logger
-reload(storage)
+import codewave_core.storage as storage
+import codewave_core.logger as logger
+import codewave_core.util as util
+import codewave_core.codewave
 
 def _optKey(key,dict,defVal = None): 
 	# optional Dictionary key
 	return dict[key] if key in dict else defVal
-
-cmdIniters = set()
-def initCmds():
-	global cmds
-	global cmdIniters
-	cmds = Command(None,{
-		'cmds':{
-			'hello':'Hello, World!'
-		}
-	})
-	for initer in cmdIniters:
-		initer()
-
-def saveCmd(fullname,data):
-	global cmds
-	cmds.setCmd(fullname,Command(fullname.split(':').pop(),data))
-	savedCmds = storage.load('cmds')
-	if savedCmds is None :
-		savedCmds = {}
-	savedCmds[fullname] = data
-	storage.save('cmds',savedCmds)
-
-def loadCmds():
-	global cmds
-	savedCmds = storage.load('cmds')
-	if savedCmds is not None :
-		for fullname, data in savedCmds.iteritems():
-			cmds.setCmd(fullname,Command(fullname.split(':').pop(),data))
 
 	
 class Command():
@@ -52,6 +25,8 @@ class Command():
 			'nameToParam' : None,
 			'checkCarret' : True,
 			'parse' : False,
+			'beforeExecute' : None,
+			'alterResult' : None,
 		}
 		self.options = {}
 		self.finalOptions = None
@@ -75,7 +50,7 @@ class Command():
 				else 0
 			)
 	def init(self):
-		if not self._inited :
+		if not self._inited:
 			self._inited = True
 			self.parseData(self.data)
 		return self
@@ -89,14 +64,17 @@ class Command():
 	def resultIsAvailable(self,instance = None):
 		if instance is not None and instance.cmdObj is not None:
 			return instance.cmdObj.resultIsAvailable()
-		for p in ['resultStr','resultFunct'] :
+		aliased = self.getAliased(instance)
+		if aliased is not None:
+			return aliased.resultIsAvailable(instance)
+		for p in ['resultStr','resultFunct']:
 			if getattr(self, p) is not None:
 				return True
 		return False
 	def getDefaults(self,instance = None):
 		res = {}
 		aliased = self.getAliased(instance)
-		if aliased is not None :
+		if aliased is not None:
 			res.update(aliased.getDefaults(instance))
 		res.update(self.defaults)
 		if instance is not None and instance.cmdObj is not None:
@@ -106,7 +84,7 @@ class Command():
 		if instance.cmdObj is not None:
 			return instance.cmdObj.result()
 		aliased = self.getAliased(instance)
-		if aliased is not None :
+		if aliased is not None:
 			return aliased.result(instance)
 		if self.resultFunct is not None:
 			return self.resultFunct(instance)
@@ -116,47 +94,52 @@ class Command():
 		if instance.cmdObj is not None:
 			return instance.cmdObj.execute()
 		aliased = self.getAliased(instance)
-		if aliased is not None :
+		if aliased is not None:
 			return aliased.execute(instance)
 		if self.executeFunct is not None:
 			return self.executeFunct(instance)
 	def getExecutableObj(self,instance):
 		self.init()
-		if self.cls is not None :
+		if self.cls is not None:
 			return self.cls(instance)
 		aliased = self.getAliased(instance)
-		if aliased is not None :
+		if aliased is not None:
 			return aliased.getExecutableObj(instance)
 	def getAliased(self,instance = None):
 		if instance is not None and instance.cmd == self and instance.aliasedCmd is not None :
 			return instance.aliasedCmd or None
-		if self.aliasOf is not None :
-			if instance is None :
-				from codewave import Codewave
-				codewave = Codewave()
-			else :
+		if self.aliasOf is not None:
+			if instance is not None:
 				codewave = instance.codewave
-			aliased = codewave.getCmd(self.aliasOf)
-			if instance is not None :
+			else:
+				codewave = codewave_core.codewave.Codewave()
+			aliasOf = self.aliasOf
+			if instance is not None:
+				aliasOf = aliasOf.replace('%name%',instance.cmdName)
+				self.finder = instance._getFinder(aliasOf)
+				self.finder.useFallbacks = False
+				aliased = self.finder.find()
+			else:
+				aliased = codewave.getCmd(aliasOf)
+			if instance is not None:
 				instance.aliasedCmd = aliased or False
 			return aliased
 	def setOptions(self,data):
-		for key, val in data.iteritems():
+		for key, val in data.items():
 			if key in self.defaultOptions:
 				self.options[key] = val
 	def getOptions(self,instance = None):
-		if instance is not None and instance.cmdOptions is not None :
+		if instance is not None and instance.cmdOptions is not None:
 			return instance.cmdOptions
-			
 		opt = {}
 		opt.update(self.defaultOptions)
 		aliased = self.getAliased(instance)
-		if aliased is not None :
+		if aliased is not None:
 			opt.update(aliased.getOptions(instance))
 		opt.update(self.options)
 		if instance is not None and instance.cmdObj is not None:
 			opt.update(instance.cmdObj.getOptions())
-		if instance is not None :
+		if instance is not None:
 			instance.cmdOptions = opt
 		return opt
 	def getOption(self,key,instance = None):
@@ -167,19 +150,20 @@ class Command():
 		self.data = data
 		if isinstance(data, str):
 			self.resultStr = data
+			self.options['parse'] = True
 			return True
-		elif isinstance(data,dict) :
+		elif isinstance(data,dict):
 			return self.parseDictData(data)
 		return False
 	def parseDictData(self,data):
 		res = _optKey('result',data)
-		if hasattr(res, '__call__') :
+		if hasattr(res, '__call__'):
 			self.resultFunct = res
-		elif res is not None :
+		elif res is not None:
 			self.resultStr = res
 			self.options['parse'] = True
 		execute = _optKey('execute',data)
-		if hasattr(execute, '__call__') :
+		if hasattr(execute, '__call__'):
 			self.executeFunct = execute
 		self.aliasOf = _optKey('aliasOf',data)
 		self.cls = _optKey('cls',data)
@@ -187,22 +171,21 @@ class Command():
 		
 		self.setOptions(data)
 		
-		if 'help' in data :
-			self.addCmd(self,Command('help',data['help'],self))
-		if 'fallback' in data :
-			self.addCmd(self,Command('fallback',data['fallback'],self))
-		if 'cmds' in data :
+		if 'help' in data:
+			self.addCmd(self, Command('help',data['help'],self))
+		if 'fallback' in data:
+			self.addCmd(self, Command('fallback',data['fallback'],self))
+			
+		if 'cmds' in data:
 			self.addCmds(data['cmds'])
 		return True
 	def addCmds(self,cmds):
-		for name, data in cmds.items() :
+		for name, data in cmds.items():
 			self.addCmd(Command(name,data,self))
 	def addCmd(self,cmd):
 		exists = self.getCmd(cmd.name)
-		if exists is not None :
+		if exists is not None:
 			self.removeCmd(exists)
-			# exists.name = 'super'
-			# cmd.addCmd(exists)
 		cmd.setParent(self)
 		self.cmds.append(cmd)
 		return cmd
@@ -211,20 +194,18 @@ class Command():
 		return cmd
 	def getCmd(self,fullname):
 		self.init()
-		parts = fullname.split(':',1)
-		name = parts.pop()
-		if len(parts) > 0 :
-			return self.getCmd(parts[0]).getCmd(name)
+		space,name = util.splitFirstNamespace(fullname)
+		if space is not None:
+			return self.getCmd(space).getCmd(name)
 		for cmd in self.cmds:
 			if cmd.name == name:
 				return cmd
 	def setCmd(self,fullname,cmd):
-		parts = fullname.split(':',1)
-		name = parts.pop()
-		if len(parts) > 0 :
-			next = self.getCmd(parts[0])
-			if next is None :
-				next = self.addCmd(Command(parts[0]))
+		space,name = util.splitFirstNamespace(fullname)
+		if space is not None:
+			next = self.getCmd(space)
+			if next is None:
+				next = self.addCmd(Command(space))
 			return next.setCmd(name,cmd)
 		else:
 			self.addCmd(cmd)
@@ -232,6 +213,49 @@ class Command():
 	def addDetector(self,detector):
 		self.detectors.append(detector)
 			
+
+class InitialiserSet(set):
+	def add(self,initialiser):
+		existing = self.exists(initialiser)
+		if existing :
+			self.remove(existing)
+		super(self.__class__, self).add(initialiser)
+	def exists(self,initialiser):
+		for init in self:
+			if init.__module__ == initialiser.__module__ and init.__name__ == initialiser.__name__ :
+				return init
+		return False
+	
+if 'cmdInitialisers' not in vars() :
+	cmdInitialisers = InitialiserSet()
+	cmdIniters = cmdInitialisers
+	
+def initCmds():
+	global cmds
+	global cmdInitialisers
+	cmds = Command(None,{
+		'cmds':{
+			'hello':'Hello, World!'
+		}
+	})
+	for initialiser in cmdInitialisers:
+		initialiser()
+
+def saveCmd(fullname, data):
+	global cmds
+	cmds.setCmd(fullname,Command(fullname.split(':').pop(),data))
+	savedCmds = storage.load('cmds')
+	if savedCmds is None:
+		savedCmds = {}
+	savedCmds[fullname] = data
+	storage.save('cmds',savedCmds)
+
+def loadCmds():
+	global cmds
+	savedCmds = storage.load('cmds')
+	if savedCmds is not None :
+		for fullname, data in savedCmds.items():
+			cmds.setCmd(fullname, Command(fullname.split(':').pop(), data))
 	
 class BaseCommand():
 	def __init__(self,instance):

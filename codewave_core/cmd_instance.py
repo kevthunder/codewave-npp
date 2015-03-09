@@ -1,17 +1,16 @@
-import util
 import re
-import logger
-import command
-import codewave
-import text_parser
-reload(text_parser)
+import codewave_core.codewave
+import codewave_core.util as util
+import codewave_core.logger as logger
+import codewave_core.command as command
+import codewave_core.text_parser as text_parser
 
 class CmdInstance():
 	def __init__(self,codewave,pos,str):
 		self.codewave,self.pos,self.str = codewave,pos,str
 		self.content = self.cmdObj = self.closingPos = None
 		self.replaceStart = self.replaceEnd = None
-		self.aliasedCmd = self.cmdOptions = None
+		self.cmd = self.aliasedCmd = self.cmdOptions = None
 		if not self.isEmpty():
 			self._checkCloser()
 			self.opening = self.str
@@ -114,9 +113,9 @@ class CmdInstance():
 			ecl = util.escapeRegExp(self.codewave.wrapCommentLeft())
 			ecr = util.escapeRegExp(self.codewave.wrapCommentRight())
 			ed = util.escapeRegExp(self.codewave.deco)
-			re1 = re.compile('^\\s*'+ecl+'(?:'+ed+')+\\s*(.*?)\\s*(?:'+ed+')+'+ecr+'$',re.M)
-			re2 = re.compile('^(?:'+ed+')*'+ecr+'\n')
-			re3 = re.compile('\n\\s*'+ecl+'(?:'+ed+')*$')
+			re1 = re.compile("^\\s*"+ecl+"(?:"+ed+")+\\s*(.*?)\\s*(?:"+ed+")+"+ecr+"$", re.M)
+			re2 = re.compile("^(?:"+ed+")*"+ecr+"\n")
+			re3 = re.compile("\n\\s*"+ecl+"(?:"+ed+")*$")
 			self.content = re.sub(re3,'',re.sub(re2,'',re.sub(re1,r'\1',self.content)))
 	def _getParentCmds(self):
 		p = self.codewave.getEnclosingCmd(self.getEndPos())
@@ -125,10 +124,13 @@ class CmdInstance():
 		if self.noBracket[0:len(self.codewave.noExecuteChar)] == self.codewave.noExecuteChar:
 			self.cmd = command.cmds.getCmd('core:no_execute')
 		else:
-			self.finder = self.codewave.getFinder(self.cmdName,self._getParentNamespaces())
-			self.finder.instance = self
+			self.finder = self._getFinder(self.cmdName)
 			self.cmd = self.finder.find()
 		return self.cmd
+	def _getFinder(self,cmdName):
+		finder = self.codewave.getFinder(cmdName,self._getParentNamespaces())
+		finder.instance = self
+		return finder
 	def _getCmdObj(self):
 		if self.cmd is not None:
 			self.cmdObj = self.cmd.getExecutableObj(self)
@@ -160,12 +162,18 @@ class CmdInstance():
 			else:
 				self.replaceWith('')
 		elif self.cmd is not None:
+			beforeFunct = self.cmd.getOption('beforeExecute',self)
+			if beforeFunct is not None:
+				beforeFunct(self)
 			if self.cmd.resultIsAvailable(self):
 				res = self.cmd.result(self)
 				if res is not None:
 					if self.cmd.getOption('parse',self) :
 						parser = self.getParserForText(res)
 						res = parser.parseAll()
+					alterFunct = self.cmd.getOption('alterResult',self)
+					if alterFunct is not None:
+						res = alterFunct(res,self)
 					self.replaceWith(res)
 					return True
 			else:
@@ -174,12 +182,14 @@ class CmdInstance():
 			if self.cmd.resultIsAvailable():
 				self.cmd.result(self)
 	def getParserForText(self,txt):
-		parser = codewave.Codewave(text_parser.TextParser(txt))
+		parser = codewave_core.codewave.Codewave(text_parser.TextParser(txt))
 		parser.context = self
 		parser.checkCarret = False
 		return parser
 	def getEndPos(self):
 		return self.pos+len(self.str)
+	def getPos(self):
+		return util.Pos(self.pos,self.pos+len(self.str))
 	def getIndent(self):
 		return self.pos - self.codewave.findLineStart(self.pos)
 	def applyIndent(self,text):
@@ -189,7 +199,7 @@ class CmdInstance():
 		text = self.applyIndent(text)
 		
 		cursorPos = self.pos+len(text)
-		if self.codewave.checkCarret and self.cmd.getOption('checkCarret',self):
+		if self.cmd is not None and self.codewave.checkCarret and self.cmd.getOption('checkCarret',self):
 			p = self.codewave.getCarretPos(text)
 			if p is not None :
 				cursorPos = self.pos+p

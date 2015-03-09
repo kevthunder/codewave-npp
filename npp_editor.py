@@ -1,10 +1,10 @@
 import Npp
 import sys
 import os.path
-import codewave.editor
-import codewave.util
+import codewave_core.editor
+import codewave_core.util
 
-class NppEditor(codewave.editor.Editor):
+class NppEditor(codewave_core.editor.Editor):
 	def __init__(self):
 		self.namespace = 'npp'
 	def getCursorPos(self):
@@ -45,7 +45,7 @@ class NppEditor(codewave.editor.Editor):
 	def getMultiSel(self):
 		selections = []
 		for i in range(0,Npp.editor.getSelections()):
-			selections.append(codewave.util.Pos(Npp.editor.getSelectionNStart(i), Npp.editor.getSelectionNEnd(i)))
+			selections.append(codewave_core.util.Pos(Npp.editor.getSelectionNStart(i), Npp.editor.getSelectionNEnd(i)))
 		return selections
 	def canListenToChange(self):
 		return True

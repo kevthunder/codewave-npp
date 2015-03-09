@@ -1,12 +1,15 @@
 import os.path
 import imp, sys
 import Npp
-# reload
-import codewave_npp.codewave.codewave
-import codewave_npp.npp_editor
-reload(codewave_npp.npp_editor)
-import codewave_npp.codewave.logger
-import codewave_npp.codewave.storage
+
+BASE_PATH = os.path.abspath(os.path.dirname(__file__))
+sys.path += [BASE_PATH]
+
+import codewave_core.codewave
+import npp_editor
+reload(npp_editor)
+import codewave_core.logger
+import codewave_core.storage
 
 def consoleWriteFunct(txt):
 	Npp.console.write(txt)
@@ -28,11 +31,11 @@ if debug :
 		Npp.console.write("reloads failed :" + str(e))
 		
 if debug or 'cw' not in vars() or cw is None :
-	codewave_npp.codewave.logger.WRITE_FUNCT = consoleWriteFunct
-	codewave_npp.codewave.logger.log('init codewave');
-	codewave_npp.codewave.storage.CONFIG_FOLDER = os.path.join(Npp.notepad.getPluginConfigDir(), 'codewave')
-	codewave_npp.codewave.codewave.init()
-	cw = codewave_npp.codewave.codewave.Codewave(codewave_npp.npp_editor.NppEditor())
+	codewave_core.logger.WRITE_FUNCT = consoleWriteFunct
+	codewave_core.logger.log('init codewave');
+	codewave_core.storage.CONFIG_FOLDER = os.path.join(Npp.notepad.getPluginConfigDir(), 'codewave')
+	codewave_core.codewave.init()
+	cw = codewave_core.codewave.Codewave(npp_editor.NppEditor())
 	
 cw.onActivationKey()
 
