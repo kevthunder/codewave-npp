@@ -7,6 +7,9 @@ import codewave_core.util
 class NppEditor(codewave_core.editor.Editor):
 	def __init__(self):
 		self.namespace = 'npp'
+	@property
+	def text(self):
+		return Npp.editor.getText()
 	def getCursorPos(self):
 		return {'start':Npp.editor.getSelectionStart(), 'end':Npp.editor.getSelectionEnd()}
 	def textSubstr(self,start,end):
@@ -27,7 +30,10 @@ class NppEditor(codewave_core.editor.Editor):
 	def endUndoAction(self):
 		Npp.editor.endUndoAction()
 	def getLang(self):
-		return Npp.notepad.getCurrentLang().name
+		try :
+			return Npp.notepad.getCurrentLang().name
+		except Exception as e:
+			return None
 	def getEmmetContextObject(self):
 		emmet_path = os.path.join(Npp.notepad.getNppDir(),'plugins','EmmetNPP')
 		if emmet_path not in sys.path :

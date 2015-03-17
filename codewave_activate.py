@@ -23,12 +23,12 @@ if debug :
 		for m in sys.modules.values() :
 			try :
 				if hasattr(m,'__file__') and "codewave" in m.__file__.lower() :
-					Npp.console.write("reload :" + m.__name__)
+					Npp.console.write("reload :" + m.__name__ + '\n')
 					imp.reload(m)
 			except Exception as e:
-				Npp.console.write("reload failed :" + str(e))
+				Npp.console.write("reload failed :" + str(e) + '\n')
 	except Exception as e:
-		Npp.console.write("reloads failed :" + str(e))
+		Npp.console.write("reloads failed :" + str(e) + '\n')
 		
 if debug or 'cw' not in vars() or cw is None :
 	codewave_core.logger.WRITE_FUNCT = consoleWriteFunct
