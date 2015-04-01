@@ -33,7 +33,7 @@ class NppEditor(codewave_core.editor.Editor):
 		try :
 			return Npp.notepad.getCurrentLang().name
 		except Exception as e:
-			return None
+			return Npp.editor.getLexerLanguage()
 	def getEmmetContextObject(self):
 		emmet_path = os.path.join(Npp.notepad.getNppDir(),'plugins','EmmetNPP')
 		if emmet_path not in sys.path :
