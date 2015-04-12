@@ -35,6 +35,8 @@ if debug or 'cw' not in vars() or cw is None :
 	codewave_core.logger.log('init codewave');
 	codewave_core.storage.CONFIG_FOLDER = os.path.join(Npp.notepad.getPluginConfigDir(), 'codewave')
 	codewave_core.codewave.init()
+	
+if 'cw' not in vars() or cw is None :
 	cw = codewave_core.codewave.Codewave(npp_editor.NppEditor())
 	
 cw.onActivationKey()
