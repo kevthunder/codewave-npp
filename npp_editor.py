@@ -11,7 +11,7 @@ class NppEditor(codewave_core.editor.Editor):
 	def text(self):
 		return Npp.editor.getText()
 	def getCursorPos(self):
-		return {'start':Npp.editor.getSelectionStart(), 'end':Npp.editor.getSelectionEnd()}
+		return codewave_core.util.Pos(Npp.editor.getSelectionStart(), Npp.editor.getSelectionEnd())
 	def textSubstr(self,start,end):
 		return Npp.editor.getTextRange(start,end)
 	def textLen(self):
